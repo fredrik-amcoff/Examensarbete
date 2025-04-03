@@ -255,7 +255,7 @@ def get_statistics(text_data, model, tokenizer, device, nlp, chunk_size=50, chun
     times = []
     with open(text_data, "r", encoding="utf-8") as f:
         data = json.load(f)
-    for entry in data[0:1]:
+    for entry in data:
         start_time = time.time()
         title = entry["title"]
         print(f"Article: {title}")
