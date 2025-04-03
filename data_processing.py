@@ -13,7 +13,8 @@ from gensim.models.ldamodel import LdaModel
 from nltk.tokenize import word_tokenize
 import nltk
 from transformers import GPT2LMHeadModel, GPT2Tokenizer, AutoModelForCausalLM, AutoTokenizer
-
+import json
+import pandas as pd
 
 
 def split_text_sliding_window(prompt, window_size=50, step_size=25):
@@ -111,24 +112,20 @@ def get_perplexity_data(prompt, model, prnt=True):
 
 def get_perplexity(prompt, model, tokenizer, device):
     input_ids = tokenizer(prompt, return_tensors="pt").input_ids.to(device)
-    print(2)
     with t.no_grad():
         outputs = model(input_ids, labels=input_ids)
-        print(3)
         loss = outputs.loss
         logits = outputs.logits
         perplexity = t.exp(loss).item()
-        print(4)
     probs = t.nn.functional.softmax(logits, dim=-1)  # Shape: (batch_size, seq_len, vocab_size)
-    print(5)
     # Extract probabilities of actual tokens
     token_probs = probs[0, :-1, :]  # Ignore the last token since it has no next-token prediction
     actual_token_probs = token_probs.gather(1, input_ids[:, 1:].T)  # Get the prob of the actual next token
 
     # Convert to a readable format
     decoded_tokens = tokenizer.convert_ids_to_tokens(input_ids[0])
-    for token, prob in zip(decoded_tokens[:-1], actual_token_probs.squeeze().tolist()):
-        print(f"Token: {token.ljust(10)} | Probability: {prob:.6f}")
+    #for token, prob in zip(decoded_tokens[:-1], actual_token_probs.squeeze().tolist()):
+    #    print(f"Token: {token.ljust(10)} | Probability: {prob:.6f}")
     return perplexity
 
 
@@ -304,8 +301,8 @@ device_1 = t.device("mps" if t.backends.mps.is_available() else "cuda" if t.cuda
 #device_2 = torch_directml.device()
 
 
-#nltk.download('punkt_tab')  # used for lda burstiness
-#nlp_1 = spacy.load("en_core_web_sm")  # used for syntactic burstiness
+nltk.download('punkt_tab')  # used for lda burstiness
+nlp_1 = spacy.load("en_core_web_sm")  # used for syntactic burstiness
 #model_1 = GPT2LMHeadModel.from_pretrained("gpt2")
 #tokenizer_1 = GPT2Tokenizer.from_pretrained("gpt2")
 # BLOOM
@@ -317,62 +314,19 @@ tokenizer_3 = AutoTokenizer.from_pretrained("ai-forever/mGPT")
 #model_4 = HookedTransformer.from_pretrained("gpt2-medium", device = device_1)
 
 model_3.to(device_1)
-print(1)
-time_1 = time.time()
-prompt_1 = """
-Europa (från grekiskans: Ευρώπη) är jordens näst minsta världsdel till ytan men tredje folkrikaste, med lite mer än 750 miljoner invånare (2023) varav över 90 procent talar språk som tillhör den indoeuropeiska språkfamiljen. Europa är världens näst mest tätbefolkade världsdel och har den näst högsta produktiviteten per person. Världsdelen Europa utgör den västligaste delen av kontinenten Eurasien, och avgränsas av Atlanten i väster (gränsen mot Nordamerika går genom Danmarksundet mellan Island och det danska autonoma landet Grönland), Medelhavet i söder och Norra ishavet i norr, medan gränsen mot Asien i öster går längs Uralbergen, Uralfloden, Kaspiska havet, Kaukasus vattendelare och Svarta havet (som är ett innanhav av Medelhavet).
 
-De första moderna människorna kom till Europa för cirka 40 000 år sedan.[13] Under istiden var de nordligaste delarna obeboeliga och befolkningen levde i refugier i södra och sydöstra Europa, efter istiden expanderade de europeiska stammarna norrut. Under yngre stenåldern och bronsåldern skedde stora kulturella och ekonomiska omvandlingar, oftast med centrum kring Medelhavet. Under Romarrikets storhetstid under de första seklerna e.Kr. växte den nya religionen kristendomen snabbt. Under renässansen grundlades den dynamik som gav upphov till den europeiska upplysningen, den industriella revolutionen och vetenskapens framväxt.[14] Under andra hälften av det andra millenniet e.Kr. skedde snabb befolkningstillväxt och miljontals européer utvandrade till andra världsdelar. Främst Frankrike, Storbritannien, Portugal, Nederländerna och Spanien, men även flera andra länder, skaffade sig kolonier och utländska besittningar och spred europeisk kultur globalt.[15]
-
-Allt färre européer är under 2000-talet troende kristna,[16] och majoriteten av yngre människor beräknas under 2000-talet sakna religiös tillhörighet.[17] Europas politik präglas i dag av samarbetet inom Europeiska unionen (EU), som växte fram ur tidigare europeiska samarbeten och i dag består av 27 medlemsstater (varav 26 ligger geografiskt i Europa, medan Cypern ligger geografiskt i Asien). Östeuropa präglas geografiskt, ekonomiskt och politiskt av ett stort Ryssland, vilket under större delen av 1900-talet fungerade som den centrala delen i Sovjetunionen.
-"""
-
-tokens = tokenizer_3(prompt_1, return_tensors="pt")
-
-num_tokens = tokens.input_ids.shape[1]
-print(num_tokens)
-
-print(get_perplexity(prompt_1, model_3, tokenizer_3, device_1))
-
-#pp_data = get_perplexity_data(prompt_1, model_1)
-#print(pp_data)
+#time_1 = time.time()
+get_statistics("text_data.json", model_3, tokenizer_3, device_1, nlp_1)
+#prompt_1 = """
 #
-time_2 = time.time()
-print(f'Run time: \n{time_2 - time_1}')
-#print(f'Prob mean: \n{np.mean(pp_data["prob_list"])}')
-#print(f'Prob std: \n{np.std(pp_data["prob_list"])}')
-#print(f'Odds mean: \n{np.mean(pp_data["odds_list"])}')
-#print(f'Odds std: \n{np.std(pp_data["odds_list"])}')
-#print(f'Mean run time per token: \n{np.mean(pp_data["times"])}')
+#"""
 #
-#plt.plot(pp_data[3])
-#plt.show()
-#plt.hist(pp_data[0], bins=100, density=True)
-#plt.show()
-#plt.hist(pp_data[1], bins=50, density=True)
-#plt.show()
-
-
-"""
-df = pd.read_csv("logodds_hum.csv")
-plt.hist(df["logit"], bins=100, density=True, alpha=0.5)
-df_gen = pd.read_csv("logodds_gen.csv")
-plt.hist(df_gen["logit"], bins=100, density=True, alpha=0.5)
-plt.show()
-print(np.mean(df["logit"]))
-print(np.mean(df_gen["logit"]))
-"""
-#new_data = {
-#    "token": token_list,
-#    "logit": logit_list,
-#    "prob": prob_list,
-#    "logodds": odds_list
-#}
+#tokens = tokenizer_3(prompt_1, return_tensors="pt")
 #
-#new_df = pd.DataFrame(new_data)
-#df = pd.concat([df, new_df], ignore_index=True)
-#df.to_csv("logodds_hum.csv", index=False)
+#num_tokens = tokens.input_ids.shape[1]
+#print(num_tokens)
+#
+#print(get_perplexity(prompt_1, model_3, tokenizer_3, device_1))
 
-
-
-#test_prompt(prompt, answer, model, prepend_space_to_answer=False)
+#time_2 = time.time()
+#print(f'Run time: \n{time_2 - time_1}')
