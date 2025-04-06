@@ -128,16 +128,17 @@ def get_perplexity(prompt, model, tokenizer, device):
     input_ids = tokenizer(prompt, return_tensors="pt").input_ids.to(device)
     with t.no_grad():
         outputs = model(input_ids, labels=input_ids)
-        loss = outputs.loss
-        logits = outputs.logits
-        perplexity = t.exp(loss).item()
-    probs = t.nn.functional.softmax(logits, dim=-1)  # Shape: (batch_size, seq_len, vocab_size)
+    loss = outputs.loss
+    #logits = outputs.logits
+    perplexity = t.exp(loss).item()
+
+    #probs = t.nn.functional.softmax(logits, dim=-1)  # Shape: (batch_size, seq_len, vocab_size)
     # Extract probabilities of actual tokens
-    token_probs = probs[0, :-1, :]  # Ignore the last token since it has no next-token prediction
-    actual_token_probs = token_probs.gather(1, input_ids[:, 1:].T)  # Get the prob of the actual next token
+    #token_probs = probs[0, :-1, :]  # Ignore the last token since it has no next-token prediction
+    #actual_token_probs = token_probs.gather(1, input_ids[:, 1:].T)  # Get the prob of the actual next token
 
     # Convert to a readable format
-    decoded_tokens = tokenizer.convert_ids_to_tokens(input_ids[0])
+    #decoded_tokens = tokenizer.convert_ids_to_tokens(input_ids[0])
     #for token, prob in zip(decoded_tokens[:-1], actual_token_probs.squeeze().tolist()):
     #    print(f"Token: {token.ljust(10)} | Probability: {prob:.6f}")
     return perplexity
