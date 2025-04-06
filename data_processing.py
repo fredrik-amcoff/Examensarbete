@@ -15,6 +15,20 @@ import nltk
 from transformers import GPT2LMHeadModel, GPT2Tokenizer, AutoModelForCausalLM, AutoTokenizer
 import json
 import pandas as pd
+from IntrinsicDim import PHD
+import re
+
+
+def clean_text(text):
+    # Remove references
+    text = re.sub(r"\[\d+\]|\(\d{4}\)", "", text)
+    # Remove unwanted characters
+    text = re.sub(r"[^a-zA-Z0-9\s.,!?()'\"-]", "", text)
+    # Replace multiple spaces with a single space
+    text = re.sub(r"\s+", " ", text)
+    # Remove newlines
+    text = text.replace('\n', ' ').replace('  ', ' ')
+    return text
 
 
 def split_text_sliding_window(prompt, window_size=50, step_size=25):
