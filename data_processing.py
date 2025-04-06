@@ -339,18 +339,4 @@ tokenizer_3 = AutoTokenizer.from_pretrained("ai-forever/mGPT")
 
 model_3.to(device_1)
 
-#time_1 = time.time()
 get_statistics("text_data.json", model_3, tokenizer_3, device_1, nlp_1)
-#prompt_1 = """
-#
-#"""
-#
-#tokens = tokenizer_3(prompt_1, return_tensors="pt")
-#
-#num_tokens = tokens.input_ids.shape[1]
-#print(num_tokens)
-#
-#print(get_perplexity(prompt_1, model_3, tokenizer_3, device_1))
-
-#time_2 = time.time()
-#print(f'Run time: \n{time_2 - time_1}')
