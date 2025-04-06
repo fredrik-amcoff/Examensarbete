@@ -1,5 +1,5 @@
 import numpy as np
-
+import torch as t
 from scipy.spatial.distance import cdist
 from threading import Thread
 
@@ -52,7 +52,7 @@ class PHD():
         if self.distance_matrix:
             return W[random_indices][:, random_indices]
         else:
-            return W[random_indices]
+            return t.tensor(W[random_indices], device="cuda", dtype=t.float32)
 
     def _calc_ph_dim_single(self, W, test_n, outp, thread_id):
         lengths = []
@@ -69,6 +69,7 @@ class PHD():
                     reruns[i] = prim_tree(tmp, self.alpha)
                 else:
                     reruns[i] = prim_tree(cdist(tmp, tmp, metric=self.metric), self.alpha)
+                    dist_matrix = t.cdist(tmp, tmp)
 
             lengths.append(np.median(reruns))
         lengths = np.array(lengths)
