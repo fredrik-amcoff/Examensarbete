@@ -24,6 +24,36 @@ def prim_tree(adj_matrix, alpha=1.0):
         
     return s.item()
 
+
+def prim_tree_cuda(adj_matrix, alpha=1.0):
+    # adj_matrix: (n, n) PyTorch tensor on GPU
+
+    infty = t.max(adj_matrix) + 10
+
+    n = adj_matrix.shape[0]
+    dst = t.full((n,), infty.item(), device=adj_matrix.device)
+    visited = t.zeros(n, dtype=t.bool, device=adj_matrix.device)
+    ancestor = t.full((n,), -1, dtype=t.long, device=adj_matrix.device)
+
+    v, s = 0, 0.0
+
+    for i in range(n - 1):
+        visited[v] = True
+
+        # Update distances and ancestors
+        mask = adj_matrix[v] < dst
+        ancestor[mask] = v
+        dst = t.minimum(dst, adj_matrix[v])
+
+        dst[visited] = infty  # Don't re-visit nodes
+
+        # Choose the next node with the smallest distance
+        v = t.argmin(dst).item()
+        s += adj_matrix[v, ancestor[v]].pow(alpha)
+
+    return s.item()
+
+
 def process_string(sss):
     return sss.replace('\n', ' ').replace('  ', ' ')
 
@@ -66,10 +96,10 @@ class PHD():
             for i in range(restarts):
                 tmp = self._sample_W(W, n)
                 if self.distance_matrix:
-                    reruns[i] = prim_tree(tmp, self.alpha)
+                    reruns[i] = prim_tree_cuda(tmp, self.alpha)
                 else:
-                    reruns[i] = prim_tree(cdist(tmp, tmp, metric=self.metric), self.alpha)
                     dist_matrix = t.cdist(tmp, tmp)
+                    reruns[i] = prim_tree_cuda(dist_matrix, self.alpha)
 
             lengths.append(np.median(reruns))
         lengths = np.array(lengths)
