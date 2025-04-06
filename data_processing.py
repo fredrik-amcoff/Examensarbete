@@ -234,16 +234,15 @@ def get_lda_burstiness(prompt, num_topics=3, chunk_size=50, chunk_type='standard
     return np.mean(topic_variance, dtype=np.float64)  # Higher variance = more burstiness
 
 
-def get_intrinsic_dimensions(prompt, model, tokenizer, min_subsample=40, intermediate_points=7):
+def get_intrinsic_dimensions(prompt, model, tokenizer, device, min_subsample=40, intermediate_points=7):
     """
-    Note: if either of inp or out is not zero, the other one can't be zero either.
     This function is a modified version from https://github.com/ArGintum/GPTID
     :param prompt: input text
     :param model: input model
     :param tokenizer: input tokenizer
     :return:
     """
-    inputs = tokenizer(prompt, return_tensors="pt")
+    inputs = tokenizer(prompt, return_tensors="pt").to(device)
     with t.no_grad():
         outp = model(**inputs)[0][0]
     # We omit the first and last tokens (<CLS> and <SEP> because they do not directly correspond to any part of the)
@@ -275,7 +274,7 @@ def get_statistics(text_data, model, tokenizer, device, nlp, chunk_size=50, chun
             "perplexity": get_perplexity(text, model, tokenizer, device),
             "char_std": sb_data["char_std"],
             "word_std": sb_data["word_std"],
-            "intrinsic_dimensions": get_intrinsic_dimensions(text, model, tokenizer),
+            "intrinsic_dimensions": get_intrinsic_dimensions(text, model, tokenizer, device),
             "temporal_burstiness": get_temporal_burstiness(text),
             "syntactic_burstiness": get_syntactic_burstiness(text, nlp),
             "wd_burstiness": get_wd_burstiness(text, chunk_size=chunk_size, chunk_type=chunk_type),
