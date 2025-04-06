@@ -269,67 +269,54 @@ def get_statistics(text_data, model, tokenizer, device, nlp, chunk_size=50, chun
     :param num_topics: number of topics in lda burstiness
     :return: None, stores data in two csv files
     """
-    statistics_ai = {
-        "perplexity": [],
-        "char_std": [],
-        "word_std": [],
-        "temporal_burstiness": [],
-        "syntactic_burstiness": [],
-        "wd_burstiness": [],
-        "semantic_burstiness": [],
-        "ai": []
-    }
-    statistics_human = {
-        "perplexity": [],
-        "char_std": [],
-        "word_std": [],
-        "temporal_burstiness": [],
-        "syntactic_burstiness": [],
-        "wd_burstiness": [],
-        "semantic_burstiness": [],
-        "ai": []
-    }
+    def collect_statistics(text, label):
+        sb_data = get_sentence_burstiness(text)
+        return {
+            "perplexity": get_perplexity(text, model, tokenizer, device),
+            "char_std": sb_data["char_std"],
+            "word_std": sb_data["word_std"],
+            "intrinsic_dimensions": get_intrinsic_dimensions(text, model, tokenizer),
+            "temporal_burstiness": get_temporal_burstiness(text),
+            "syntactic_burstiness": get_syntactic_burstiness(text, nlp),
+            "wd_burstiness": get_wd_burstiness(text, chunk_size=chunk_size, chunk_type=chunk_type),
+            "semantic_burstiness": get_lda_burstiness(text, num_topics=num_topics, chunk_size=chunk_size, chunk_type=chunk_type),
+            "ai": label
+        }
+
+    measures = ["perplexity", "char_std", "word_std", "intrinsic_dimensions", "temporal_burstiness",
+                "syntactic_burstiness", "wd_burstiness", "semantic_burstiness", "ai"]
+
+    statistics_ai = {key: [] for key in measures}
+    statistics_human = {key: [] for key in measures}
+
     times = []
     with open(text_data, "r", encoding="utf-8") as f:
         data = json.load(f)
     for entry in data:
         start_time = time.time()
-        title = entry["title"]
-        print(f"Article: {title}")
+        # Print information
+        print(f'\nArticle: {entry["title"]}')
         print(f'{entry["ai_words"]} words (AI)')
         print(f'{entry["wiki_words"]} words (wiki)')
-        wikipedia_text = entry["wikipedia_text"]
-        ai_text = entry["ai_text"]
-        ai_sb_data = get_sentence_burstiness(ai_text)
-        hum_sb_data = get_sentence_burstiness(wikipedia_text)
-        # Append to ai dataset
-        statistics_ai["perplexity"].append(get_perplexity(ai_text, model, tokenizer, device))
-        statistics_ai["char_std"].append(ai_sb_data["char_std"])
-        statistics_ai["word_std"].append(ai_sb_data["word_std"])
-        statistics_ai["temporal_burstiness"].append(get_temporal_burstiness(ai_text))
-        statistics_ai["syntactic_burstiness"].append(get_syntactic_burstiness(ai_text, nlp))
-        statistics_ai["wd_burstiness"].append(get_wd_burstiness(ai_text, chunk_size=chunk_size, chunk_type=chunk_type))
-        statistics_ai["semantic_burstiness"].append(
-            get_lda_burstiness(ai_text, num_topics=num_topics, chunk_size=chunk_size, chunk_type=chunk_type))
-        statistics_ai["ai"].append(1)
-        # Append to human dataset
-        statistics_human["perplexity"].append(get_perplexity(wikipedia_text, model, tokenizer, device))
-        statistics_human["char_std"].append(hum_sb_data["char_std"])
-        statistics_human["word_std"].append(hum_sb_data["word_std"])
-        statistics_human["temporal_burstiness"].append(get_temporal_burstiness(wikipedia_text))
-        statistics_human["syntactic_burstiness"].append(get_syntactic_burstiness(wikipedia_text, nlp))
-        statistics_human["wd_burstiness"].append(get_wd_burstiness(wikipedia_text, chunk_size=chunk_size, chunk_type=chunk_type))
-        statistics_human["semantic_burstiness"].append(
-            get_lda_burstiness(wikipedia_text, num_topics=num_topics, chunk_size=chunk_size, chunk_type=chunk_type))
-        statistics_human["ai"].append(0)
+        human_text = clean_text(entry["wikipedia_text"])
+        ai_text = clean_text(entry["ai_text"])
+
+        ai_stats = collect_statistics(ai_text, label=1)
+        human_stats = collect_statistics(human_text, label=0)
+
+        # Append to dataset
+        for key in statistics_ai.keys():
+            statistics_ai[key].append(ai_stats[key])
+            statistics_human[key].append(human_stats[key])
+
         stop_time = time.time()
         print(f"Time: {stop_time - start_time}")
         times.append(stop_time - start_time)
     df_ai = pd.DataFrame(statistics_ai)
-    df_ai.to_csv('statistics_ai.csv', index=False, encoding='utf-8')
     df_human = pd.DataFrame(statistics_human)
-    df_human.to_csv('statistics_human.csv', index=False, encoding='utf-8')
-    print(statistics_human)
+    df_combined = pd.concat([df_ai, df_human], ignore_index=True)
+    df_combined.to_csv('text_statistics.csv', index=False, encoding='utf-8')
+
     print(f'Times: {times}')
     print(f'Total time: {sum(times)}')
 
