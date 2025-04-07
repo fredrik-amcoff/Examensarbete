@@ -2,6 +2,9 @@ import openai
 import wikipediaapi
 import json
 import time
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 
 def count_words(text):
@@ -57,6 +60,19 @@ def store_data(titles, key, user_agent, num_paragraphs=3):
         json.dump(data, f, indent=4, ensure_ascii=False)
     print(sum(times))
     print(times)
+
+
+def generate_pair_plots():
+    file_path = "text_statistics.csv"
+    df = pd.read_csv(file_path)
+    numerical_columns = [col for col in df.columns if col != "ai"]
+    sns.set_theme(style="whitegrid")
+
+    # Create pairplot with category-based coloring
+    g = sns.pairplot(df, vars=numerical_columns, hue="ai", palette={0: "blue", 1: "red"}, plot_kws={'alpha': 0.6})
+    output_path = 'preliminary_results.png'
+    g.savefig(output_path, dpi=300)
+    plt.show()
 
 
 # for user: contact information of the format "<Application Name>/<Version> (<Description>, <Contact Information>)",
