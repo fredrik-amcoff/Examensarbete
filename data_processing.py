@@ -144,6 +144,26 @@ def get_perplexity(prompt, model, tokenizer, device):
     return perplexity
 
 
+def get_perplexity_variability(prompt, model, tokenizer, device, chunk_size=50, chunk_type="standard"):
+    if chunk_type == 'sliding_window':
+        chunks = split_text_sliding_window(prompt, chunk_size)
+    elif chunk_type == 'sentence':
+        chunks = prompt.split('.')
+    else:
+        chunks = split_text_into_chunks(prompt, chunk_size)
+    if len(chunks) < 2:
+        return 0  # Not enough segments to compute variance
+    ppls = []
+
+    for chunk in chunks:
+        chars = len(chunk.strip())
+        if chars > 0:
+            ppl = get_perplexity(chunk, model, tokenizer, device)
+            ppls.append(ppl)
+
+    return np.std(ppls)
+
+
 def get_sentence_burstiness(prompt):
     # Split the text into sentences
     sentences = prompt.split('.')
@@ -272,6 +292,7 @@ def get_statistics(text_data, model, tokenizer, device, nlp, chunk_size=50, chun
         sb_data = get_sentence_burstiness(text)
         return {
             "perplexity": get_perplexity(text, model, tokenizer, device),
+            "perplexity_std": get_perplexity_variability(text, model, tokenizer, device, chunk_type='sentence'),
             "char_std": sb_data["char_std"],
             "word_std": sb_data["word_std"],
             "intrinsic_dimensions": get_intrinsic_dimensions(text, model, tokenizer, device),
@@ -282,7 +303,7 @@ def get_statistics(text_data, model, tokenizer, device, nlp, chunk_size=50, chun
             "ai": label
         }
 
-    measures = ["perplexity", "char_std", "word_std", "intrinsic_dimensions", "temporal_burstiness",
+    measures = ["perplexity", "perplexity_std", "char_std", "word_std", "intrinsic_dimensions", "temporal_burstiness",
                 "syntactic_burstiness", "wd_burstiness", "semantic_burstiness", "ai"]
 
     statistics_ai = {key: [] for key in measures}
