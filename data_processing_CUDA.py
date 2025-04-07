@@ -13,7 +13,7 @@ import nltk
 from transformers import GPT2LMHeadModel, GPT2Tokenizer, AutoModelForCausalLM, AutoTokenizer
 import json
 import pandas as pd
-from IntrinsicDim import PHD
+from IntrinsicDimCUDA import PHD
 import re
 
 
