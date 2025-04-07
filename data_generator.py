@@ -1,4 +1,3 @@
-import requests
 import openai
 import wikipediaapi
 import json
@@ -169,4 +168,3 @@ wikipedia_topics = [
 ]
 
 store_data(wikipedia_topics, token, user)
-
