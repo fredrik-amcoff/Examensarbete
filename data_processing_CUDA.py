@@ -8,7 +8,7 @@ import spacy
 from sklearn.feature_extraction.text import TfidfVectorizer
 from gensim.corpora import Dictionary
 from gensim.models.ldamodel import LdaModel
-from nltk.tokenize import word_tokenize
+from nltk.tokenize import word_tokenize, sent_tokenize
 import nltk
 from transformers import GPT2LMHeadModel, GPT2Tokenizer, AutoModelForCausalLM, AutoTokenizer
 import json
@@ -142,11 +142,11 @@ def get_perplexity(prompt, model, tokenizer, device):
     return perplexity
 
 
-def get_perplexity_variability(prompt, model, tokenizer, device, chunk_size=50, chunk_type="standard"):
+def get_perplexity_variability(prompt, model, tokenizer, device, chunk_size=50, chunk_type="standard", language="english"):
     if chunk_type == 'sliding_window':
         chunks = split_text_sliding_window(prompt, chunk_size)
     elif chunk_type == 'sentence':
-        chunks = prompt.split('.')
+        chunks = sent_tokenize(prompt, language=language)
     else:
         chunks = split_text_into_chunks(prompt, chunk_size)
     if len(chunks) < 2:
@@ -290,7 +290,7 @@ def get_statistics(text_data, model, tokenizer, device, nlp, chunk_size=50, chun
         sb_data = get_sentence_burstiness(text)
         return {
             "perplexity": get_perplexity(text, model, tokenizer, device),
-            "perplexity_std": get_perplexity_variability(text, model, tokenizer, device, chunk_type='sentence'),
+            "perplexity_std": get_perplexity_variability(text, model, tokenizer, device, chunk_type=chunk_type),
             "char_std": sb_data["char_std"],
             "word_std": sb_data["word_std"],
             "intrinsic_dimensions": get_intrinsic_dimensions(text, model, tokenizer, device),
@@ -310,10 +310,12 @@ def get_statistics(text_data, model, tokenizer, device, nlp, chunk_size=50, chun
     times = []
     with open(text_data, "r", encoding="utf-8") as f:
         data = json.load(f)
+    index = 0
     for entry in data:
         start_time = time.time()
+        index += 1
         # Print information
-        print(f'\nArticle: {entry["title"]}')
+        print(f'\nArticle {index}: {entry["title"]}')
         print(f'{entry["ai_words"]} words (AI)')
         print(f'{entry["wiki_words"]} words (wiki)')
         human_text = clean_text(entry["wikipedia_text"])
@@ -357,4 +359,4 @@ tokenizer_3 = AutoTokenizer.from_pretrained("ai-forever/mGPT")
 
 model_3.to(device_1)
 
-get_statistics("text_data.json", model_3, tokenizer_3, device_1, nlp_1)
+get_statistics("text_data.json", model_3, tokenizer_3, device_1, nlp_1, chunk_type='sliding_window')
