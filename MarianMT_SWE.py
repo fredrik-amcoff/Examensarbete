@@ -47,7 +47,7 @@ def translate_json(input_file, output_file):
     
     print(f"Translation completed. Results saved to {output_file}.")
 
-# Example usage
+
 input_file = 'text_data.json'  # JSON file containing the text to translate
 output_file = 'translated_text_data.json'  # File to save translated Swedish text
 translate_json(input_file, output_file)
