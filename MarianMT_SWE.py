@@ -1,16 +1,20 @@
 import json
 from transformers import MarianMTModel, MarianTokenizer
 from tqdm import tqdm
+import torch
+
+# Check if CUDA is available and set device accordingly
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Load MarianMT model and tokenizer for English to Swedish translation
 model_name = 'Helsinki-NLP/opus-mt-en-sv'
-model = MarianMTModel.from_pretrained(model_name)
+model = MarianMTModel.from_pretrained(model_name).to(device)  # Move model to GPU if available
 tokenizer = MarianTokenizer.from_pretrained(model_name)
 
 # Function to translate text from English to Swedish
 def translate(text):
-    # Tokenize the input text
-    tokens = tokenizer(text, return_tensors="pt", padding=True, truncation=True)
+    # Tokenize the input text and move tensors to the device (GPU/CPU)
+    tokens = tokenizer(text, return_tensors="pt", padding=True, truncation=True).to(device)
     
     # Perform translation
     translated_tokens = model.generate(**tokens)
