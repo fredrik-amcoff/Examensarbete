@@ -20,7 +20,9 @@ def generate_text(title, length, key):
     client = openai.OpenAI(api_key=key)
     response = client.chat.completions.create(
         model="gpt-4o-mini",
-        messages=[{"role": "user", "content": f"Write a text about {title} in around {length} words."}],
+        messages=[{"role": "user", "content": f'Write a text about the topic of "{title}" in around {length} words.'}],
+        temperature=1,
+        seed=587078
     )
     text_response = response.choices[0].message.content
     return text_response
@@ -39,7 +41,7 @@ def get_wikipedia_text(title, user_agent, num_paragraphs=3):
     return output_text, len(words)
 
 
-def store_data(titles, key, user_agent, num_paragraphs=3):
+def store_data_from_list(titles, key, user_agent, num_paragraphs=3):
     data = []
     times = []
     for title in titles:
