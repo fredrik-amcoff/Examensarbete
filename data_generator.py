@@ -71,7 +71,7 @@ def store_data_from_list(titles, key, user_agent, num_paragraphs=3):
 def store_data_from_random(num_articles, key, user_agent, num_paragraphs=3):
     data = []
     article_titles = []
-    with open('vital_articles.csv', 'r', encoding="utf-8") as f:
+    with open('vital_articles_1.csv', 'r', encoding="utf-8") as f:
         reader = csv.reader(f)
         for row in reader:
             if row:
