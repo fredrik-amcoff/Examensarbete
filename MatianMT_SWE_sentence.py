@@ -9,7 +9,7 @@ import nltk
 nltk.download('punkt')
 
 # Check if CUDA is available and set device accordingly
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda")
 
 # Load MarianMT model and tokenizer for English to Swedish translation
 model_name = 'Helsinki-NLP/opus-mt-en-sv'
@@ -53,13 +53,23 @@ def translate_json(input_file, output_file):
     
     print(f"Translation completed. Results saved to {output_file}.")
 
+def translate_sentences_batch(sentences, batch_size=8):
+    translated = []
+    for i in range(0, len(sentences), batch_size):
+        batch = sentences[i:i+batch_size]
+        tokens = tokenizer(batch, return_tensors="pt", padding=True, truncation=True).to(device)
+        outputs = model.generate(**tokens)
+        translated_batch = [tokenizer.decode(t, skip_special_tokens=True) for t in outputs]
+        translated.extend(translated_batch)
+    return translated
+
 # Function to translate an entire paragraph by splitting it into sentences
 def translate_paragraph(paragraph):
     sentences = nltk.sent_tokenize(paragraph)
-    translated_sentences = [translate_sentence(sentence) for sentence in sentences]
+    translated_sentences = translate_sentences_batch(sentences)
     return ' '.join(translated_sentences)
 
 # Run translation
-input_file = 'text_data.json'
-output_file = 'translated_text_data_sentence.json'
+input_file = 'text_data_rnd_1.json'
+output_file = 'translated_rnd_1.json'
 translate_json(input_file, output_file)
