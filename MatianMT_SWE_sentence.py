@@ -70,6 +70,6 @@ def translate_paragraph(paragraph):
     return ' '.join(translated_sentences)
 
 # Run translation
-input_file = 'text_data_rnd_1.json'
-output_file = 'translated_rnd_1.json'
+input_file = 'text_data_rnd_2.json'
+output_file = 'translated_rnd_2.json'
 translate_json(input_file, output_file)
