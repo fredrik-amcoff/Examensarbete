@@ -342,20 +342,12 @@ def get_statistics(text_data, model, tokenizer, device, nlp, chunk_size=50, chun
 
 
 device_1 = t.device("mps" if t.backends.mps.is_available() else "cuda" if t.cuda.is_available() else "cpu")
-#device_2 = torch_directml.device()
 
 
 nltk.download('punkt_tab')  # used for lda burstiness
 nlp_1 = spacy.load("en_core_web_sm")  # used for syntactic burstiness
-#model_1 = GPT2LMHeadModel.from_pretrained("gpt2")
-#tokenizer_1 = GPT2Tokenizer.from_pretrained("gpt2")
-# BLOOM
-#model_2 = AutoModelForCausalLM.from_pretrained("bigscience/bloom-560m")
-#tokenizer_2 = AutoTokenizer.from_pretrained("bigscience/bloom-560m")
-# mGPT
 model_3 = AutoModelForCausalLM.from_pretrained("ai-forever/mGPT")
 tokenizer_3 = AutoTokenizer.from_pretrained("ai-forever/mGPT")
-#model_4 = HookedTransformer.from_pretrained("gpt2-medium", device = device_1)
 
 model_3.to(device_1)
 
