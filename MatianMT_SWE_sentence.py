@@ -24,6 +24,13 @@ def clean_text(text):
     text = text.replace('\n', ' ').replace('  ', ' ')
     return text.strip()
 
+#post-process common artifacts
+def normalize(text):
+    text = re.sub(r"(\.\s)+\.", ".", text)   # Collapse spaced dot sequences to single dot
+    text = re.sub(r"\.{2,}", "", text)       # Remove sequences of 2+ dots
+    text = re.sub(r"-{2,}", "", text)        # Remove sequences of 2+ hyphens
+    return text
+
 # Function to translate a single sentence
 def translate_sentence(sentence):
     cleaned_sentence = clean_text(sentence)
@@ -43,17 +50,12 @@ def translate_sentences_batch(sentences, batch_size=8):
         translated.extend(translated_batch)
     return translated
 
-# Replace sequences like ". . ." or ". . . ." with a single "."
-def normalize_dots(text):
-    text = re.sub(r"(\.\s)+\.", ".", text)
-    return text
-
 # Function to translate an entire paragraph
 def translate_paragraph(paragraph):
     sentences = nltk.sent_tokenize(paragraph)
     translated_sentences = translate_sentences_batch(sentences)
     joined = ' '.join(translated_sentences)
-    return normalize_dots(joined)
+    return normalize(joined)
 
 # Function to process JSON file and translate content
 def translate_json(input_file, output_file):

@@ -26,6 +26,12 @@ def clean_text(text):
     text = re.sub(r"\s+", " ", text)
     # Remove newlines
     text = text.replace('\n', ' ').replace('  ', ' ')
+
+    # Remove artifacts
+    text = re.sub(r"(\.\s)+\.", ".", text)   # Collapse spaced dot sequences to single dot
+    text = re.sub(r"\.{2,}", "", text)       # Remove sequences of 2+ dots
+    text = re.sub(r"-{2,}", "", text)        # Remove sequences of 2+ hyphens
+
     return text
 
 
