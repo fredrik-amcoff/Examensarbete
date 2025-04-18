@@ -32,27 +32,7 @@ def translate_sentence(sentence):
     translated_sentence = tokenizer.decode(translated_tokens[0], skip_special_tokens=True)
     return translated_sentence
 
-# Function to process the JSON file and translate its content sentence by sentence
-def translate_json(input_file, output_file):
-    with open(input_file, 'r', encoding='utf-8') as infile:
-        data = json.load(infile)
-    
-    translated_data = []
-    
-    for item in tqdm(data, desc="Translating", unit="entry"):
-        translated_item = item.copy()
-        
-        # Translate sentence by sentence for each text field
-        translated_item['wikipedia_text_sv'] = translate_paragraph(item['wikipedia_text'])
-        translated_item['ai_text_sv'] = translate_paragraph(item['ai_text'])
-        
-        translated_data.append(translated_item)
-    
-    with open(output_file, 'w', encoding='utf-8') as outfile:
-        json.dump(translated_data, outfile, ensure_ascii=False, indent=4)
-    
-    print(f"Translation completed. Results saved to {output_file}.")
-
+# Function to batch translate sentences
 def translate_sentences_batch(sentences, batch_size=8):
     translated = []
     for i in range(0, len(sentences), batch_size):
@@ -63,13 +43,37 @@ def translate_sentences_batch(sentences, batch_size=8):
         translated.extend(translated_batch)
     return translated
 
-# Function to translate an entire paragraph by splitting it into sentences
+# Replace sequences like ". . ." or ". . . ." with a single "."
+def normalize_dots(text):
+    text = re.sub(r"(\.\s)+\.", ".", text)
+    return text
+
+# Function to translate an entire paragraph
 def translate_paragraph(paragraph):
     sentences = nltk.sent_tokenize(paragraph)
     translated_sentences = translate_sentences_batch(sentences)
-    return ' '.join(translated_sentences)
+    joined = ' '.join(translated_sentences)
+    return normalize_dots(joined)
+
+# Function to process JSON file and translate content
+def translate_json(input_file, output_file):
+    with open(input_file, 'r', encoding='utf-8') as infile:
+        data = json.load(infile)
+
+    translated_data = []
+
+    for item in tqdm(data, desc="Translating", unit="entry"):
+        translated_item = item.copy()
+        translated_item['wikipedia_text_sv'] = translate_paragraph(item['wikipedia_text'])
+        translated_item['ai_text_sv'] = translate_paragraph(item['ai_text'])
+        translated_data.append(translated_item)
+
+    with open(output_file, 'w', encoding='utf-8') as outfile:
+        json.dump(translated_data, outfile, ensure_ascii=False, indent=4)
+
+    print(f"Translation completed. Results saved to {output_file}.")
 
 # Run translation
-input_file = 'text_data_rnd_2.json'
-output_file = 'translated_rnd_2.json'
+input_file = 'translated_rnd.json'
+output_file = 'translated_rnd_NO_DOT.json'
 translate_json(input_file, output_file)

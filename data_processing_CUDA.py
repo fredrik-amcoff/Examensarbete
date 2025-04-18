@@ -351,4 +351,4 @@ tokenizer_3 = AutoTokenizer.from_pretrained("ai-forever/mGPT")
 
 model_3.to(device_1)
 
-get_statistics("translated_rnd.json", model_3, tokenizer_3, device_1, nlp_1, chunk_type='sliding_window')
+get_statistics("translated_rnd_swe_only.json", model_3, tokenizer_3, device_1, nlp_1, chunk_type='sliding_window')
