@@ -129,23 +129,22 @@ def get_perplexity_data(prompt, model, prnt=True):
 
 
 def get_perplexity(prompt, model, tokenizer, device):
-    input_ids = tokenizer(prompt, return_tensors="pt").input_ids.to(device)
+    """
+    Compute the perplexity for a batch of prompts (text).
+    """
+    # Tokenize the prompt once and store it for reuse
+    input_ids = tokenizer(prompt, return_tensors="pt", padding=True, truncation=True).input_ids.to(device)
+
+    # Compute perplexity using the tokenized prompt
     with t.no_grad():
         outputs = model(input_ids, labels=input_ids)
+    
+    # Calculate the loss and perplexity
     loss = outputs.loss
-    #logits = outputs.logits
     perplexity = t.exp(loss).item()
-
-    #probs = t.nn.functional.softmax(logits, dim=-1)  # Shape: (batch_size, seq_len, vocab_size)
-    # Extract probabilities of actual tokens
-    #token_probs = probs[0, :-1, :]  # Ignore the last token since it has no next-token prediction
-    #actual_token_probs = token_probs.gather(1, input_ids[:, 1:].T)  # Get the prob of the actual next token
-
-    # Convert to a readable format
-    #decoded_tokens = tokenizer.convert_ids_to_tokens(input_ids[0])
-    #for token, prob in zip(decoded_tokens[:-1], actual_token_probs.squeeze().tolist()):
-    #    print(f"Token: {token.ljust(10)} | Probability: {prob:.6f}")
+    
     return perplexity
+
 
 
 def get_perplexity_variability(prompt, model, tokenizer, device, chunk_size=50, chunk_type="standard", language="english"):
@@ -155,15 +154,22 @@ def get_perplexity_variability(prompt, model, tokenizer, device, chunk_size=50, 
         chunks = sent_tokenize(prompt, language=language)
     else:
         chunks = split_text_into_chunks(prompt, chunk_size)
+    
     if len(chunks) < 2:
         return 0  # Not enough segments to compute variance
+    
     ppls = []
 
-    for chunk in chunks:
-        chars = len(chunk.strip())
-        if chars > 0:
-            ppl = get_perplexity(chunk, model, tokenizer, device)
-            ppls.append(ppl)
+    # Batch tokenize the entire prompt (no need to tokenize each chunk separately)
+    prompt_tokens = tokenizer(prompt, return_tensors="pt", padding=True, truncation=True).input_ids.to(device)
+    
+    # Batch process the chunks
+    with t.no_grad():
+        for chunk in chunks:
+            chunk_input_ids = tokenizer(chunk, return_tensors="pt", padding=True, truncation=True).input_ids.to(device)
+            # Compute perplexity for each chunk in batch
+            perplexity = get_perplexity(chunk, model, tokenizer, device)
+            ppls.append(perplexity)
 
     return np.std(ppls)
 
@@ -347,7 +353,7 @@ def get_statistics(text_data, model, tokenizer, device, nlp, chunk_size=50, chun
     print(f'Total time: {sum(times)}')
 
 
-device_1 = t.device("mps" if t.backends.mps.is_available() else "cuda" if t.cuda.is_available() else "cpu")
+device_1 = t.device("cuda")
 
 
 nltk.download('punkt_tab')  # used for lda burstiness
