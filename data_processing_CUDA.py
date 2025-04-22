@@ -129,21 +129,18 @@ def get_perplexity_data(prompt, model, prnt=True):
 
 
 def get_perplexity(prompt, model, tokenizer, device):
-    """
-    Compute the perplexity for a batch of prompts (text).
-    """
-    # Tokenize the prompt once and store it for reuse
+    # Tokenize all prompts at once
     input_ids = tokenizer(prompt, return_tensors="pt", padding=True, truncation=True).input_ids.to(device)
 
-    # Compute perplexity using the tokenized prompt
     with t.no_grad():
         outputs = model(input_ids, labels=input_ids)
-    
-    # Calculate the loss and perplexity
+
+    # Calculate the loss and perplexity for the batch
     loss = outputs.loss
     perplexity = t.exp(loss).item()
-    
+
     return perplexity
+
 
 
 
@@ -285,7 +282,7 @@ def get_intrinsic_dimensions(prompt, model, tokenizer, device, min_subsample=40,
 
 
 
-def get_statistics(text_data, model, tokenizer, device, nlp, chunk_size=50, chunk_type='standard', num_topics=3):
+def get_statistics(text_data, model, tokenizer, device, nlp, output_name, chunk_size=50, chunk_type='standard', num_topics=3):
     """
     Get all statistics for several texts (from json file).
     :param text_data: json file with text data
@@ -347,7 +344,7 @@ def get_statistics(text_data, model, tokenizer, device, nlp, chunk_size=50, chun
     df_ai = pd.DataFrame(statistics_ai)
     df_human = pd.DataFrame(statistics_human)
     df_combined = pd.concat([df_ai, df_human], ignore_index=True)
-    df_combined.to_csv('text_statistics.csv', index=False, encoding='utf-8')
+    df_combined.to_csv(output_name, index=False, encoding='utf-8')
 
     print(f'Times: {times}')
     print(f'Total time: {sum(times)}')
@@ -363,4 +360,7 @@ tokenizer_3 = AutoTokenizer.from_pretrained("ai-forever/mGPT")
 
 model_3.to(device_1)
 
-get_statistics("translated_rnd_swe_only.json", model_3, tokenizer_3, device_1, nlp_1, chunk_type='sliding_window')
+for i in range(2, 11):
+    input_file = f"split_4_{i}.json"
+    output = f"text_statistics_trans_4_{i}.csv"
+    get_statistics(input_file, model_3, tokenizer_3, device_1, nlp_1, output, chunk_type='sliding_window')
