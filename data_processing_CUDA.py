@@ -360,8 +360,8 @@ tokenizer_3 = AutoTokenizer.from_pretrained("ai-forever/mGPT")
 
 model_3.to(device_1)
 
-for j in range(5, 11):
-    for i in range(9, 11):
+for j in range(6, 11):
+    for i in range(1, 11):
         input_file = f"split_{j}_{i}.json"
         output = f"text_statistics_trans_{j}_{i}.csv"
         get_statistics(input_file, model_3, tokenizer_3, device_1, nlp_1, output, chunk_type='sliding_window')
