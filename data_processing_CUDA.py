@@ -10,7 +10,7 @@ from gensim.corpora import Dictionary
 from gensim.models.ldamodel import LdaModel
 from nltk.tokenize import word_tokenize, sent_tokenize
 import nltk
-from transformers import GPT2LMHeadModel, GPT2Tokenizer, AutoModelForCausalLM, AutoTokenizer
+from transformers import GPT2LMHeadModel, GPT2Tokenizer, AutoModelForCausalLM, AutoTokenizer, AutoModel
 import json
 import pandas as pd
 from IntrinsicDimCUDA import PHD
@@ -356,7 +356,7 @@ device_1 = t.device("cuda")
 nltk.download('punkt_tab')  # used for lda burstiness
 nlp_1 = spacy.load("en_core_web_sm")  # used for syntactic burstiness
 # mGPT
-model_3 = AutoModelForCausalLM.from_pretrained("ai-forever/mGPT", return_dict_in_generate=True, output_hidden_states=True)
+model_3 = AutoModel.from_pretrained("ai-forever/mGPT", return_dict_in_generate=True, output_hidden_states=True)
 tokenizer_3 = AutoTokenizer.from_pretrained("ai-forever/mGPT")
 
 model_3.eval()
