@@ -26,6 +26,12 @@ def clean_text(text):
     text = re.sub(r"\s+", " ", text)
     # Remove newlines
     text = text.replace('\n', ' ').replace('  ', ' ')
+
+    # Remove artifacts
+    text = re.sub(r"(\.\s)+\.", ".", text)   # Collapse spaced dot sequences to single dot
+    text = re.sub(r"\.{2,}", "", text)       # Remove sequences of 2+ dots
+    text = re.sub(r"-{2,}", "", text)        # Remove sequences of 2+ hyphens
+
     return text
 
 
@@ -123,23 +129,19 @@ def get_perplexity_data(prompt, model, prnt=True):
 
 
 def get_perplexity(prompt, model, tokenizer, device):
-    input_ids = tokenizer(prompt, return_tensors="pt").input_ids.to(device)
+    # Tokenize all prompts at once
+    input_ids = tokenizer(prompt, return_tensors="pt", padding=True, truncation=True).input_ids.to(device)
+
     with t.no_grad():
         outputs = model(input_ids, labels=input_ids)
+
+    # Calculate the loss and perplexity for the batch
     loss = outputs.loss
-    #logits = outputs.logits
     perplexity = t.exp(loss).item()
 
-    #probs = t.nn.functional.softmax(logits, dim=-1)  # Shape: (batch_size, seq_len, vocab_size)
-    # Extract probabilities of actual tokens
-    #token_probs = probs[0, :-1, :]  # Ignore the last token since it has no next-token prediction
-    #actual_token_probs = token_probs.gather(1, input_ids[:, 1:].T)  # Get the prob of the actual next token
-
-    # Convert to a readable format
-    #decoded_tokens = tokenizer.convert_ids_to_tokens(input_ids[0])
-    #for token, prob in zip(decoded_tokens[:-1], actual_token_probs.squeeze().tolist()):
-    #    print(f"Token: {token.ljust(10)} | Probability: {prob:.6f}")
     return perplexity
+
+
 
 
 def get_perplexity_variability(prompt, model, tokenizer, device, chunk_size=50, chunk_type="standard", language="english"):
@@ -149,15 +151,22 @@ def get_perplexity_variability(prompt, model, tokenizer, device, chunk_size=50, 
         chunks = sent_tokenize(prompt, language=language)
     else:
         chunks = split_text_into_chunks(prompt, chunk_size)
+
     if len(chunks) < 2:
         return 0  # Not enough segments to compute variance
+
     ppls = []
 
-    for chunk in chunks:
-        chars = len(chunk.strip())
-        if chars > 0:
-            ppl = get_perplexity(chunk, model, tokenizer, device)
-            ppls.append(ppl)
+    # Batch tokenize the entire prompt (no need to tokenize each chunk separately)
+    prompt_tokens = tokenizer(prompt, return_tensors="pt", padding=True, truncation=True).input_ids.to(device)
+
+    # Batch process the chunks
+    with t.no_grad():
+        for chunk in chunks:
+            chunk_input_ids = tokenizer(chunk, return_tensors="pt", padding=True, truncation=True).input_ids.to(device)
+            # Compute perplexity for each chunk in batch
+            perplexity = get_perplexity(chunk, model, tokenizer, device)
+            ppls.append(perplexity)
 
     return np.std(ppls)
 
@@ -273,7 +282,7 @@ def get_intrinsic_dimensions(prompt, model, tokenizer, device, min_subsample=40,
 
 
 
-def get_statistics(text_data, model, tokenizer, device, nlp, chunk_size=50, chunk_type='standard', num_topics=3):
+def get_statistics(text_data, model, tokenizer, device, nlp, output_name, chunk_size=50, chunk_type='standard', num_topics=3):
     """
     Get all statistics for several texts (from json file).
     :param text_data: json file with text data
@@ -335,30 +344,27 @@ def get_statistics(text_data, model, tokenizer, device, nlp, chunk_size=50, chun
     df_ai = pd.DataFrame(statistics_ai)
     df_human = pd.DataFrame(statistics_human)
     df_combined = pd.concat([df_ai, df_human], ignore_index=True)
-    df_combined.to_csv('text_statistics.csv', index=False, encoding='utf-8')
+    df_combined.to_csv(output_name, index=False, encoding='utf-8')
 
     print(f'Times: {times}')
     print(f'Total time: {sum(times)}')
 
 
-device_1 = t.device("mps" if t.backends.mps.is_available() else "cuda" if t.cuda.is_available() else "cpu")
-#device_2 = torch_directml.device()
+device_1 = t.device("cuda")
 
 
 nltk.download('punkt_tab')  # used for lda burstiness
 nlp_1 = spacy.load("en_core_web_sm")  # used for syntactic burstiness
-#model_1 = GPT2LMHeadModel.from_pretrained("gpt2")
-#tokenizer_1 = GPT2Tokenizer.from_pretrained("gpt2")
-# BLOOM
-#model_2 = AutoModelForCausalLM.from_pretrained("bigscience/bloom-560m")
-#tokenizer_2 = AutoTokenizer.from_pretrained("bigscience/bloom-560m")
 # mGPT
 model_3 = AutoModelForCausalLM.from_pretrained("ai-forever/mGPT", return_dict_in_generate=True, output_hidden_states=True)
 tokenizer_3 = AutoTokenizer.from_pretrained("ai-forever/mGPT")
-#model_4 = HookedTransformer.from_pretrained("gpt2-medium", device = device_1)
 
 model_3.eval()
 
 model_3.to(device_1)
 
-get_statistics("text_data.json", model_3, tokenizer_3, device_1, nlp_1, chunk_type='sliding_window')
+for j in range(6, 11):
+    for i in range(1, 11):
+        input_file = f"split_{j}_{i}.json"
+        output = f"text_statistics_trans_{j}_{i}.csv"
+        get_statistics(input_file, model_3, tokenizer_3, device_1, nlp_1, output, chunk_type='sliding_window')
