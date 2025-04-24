@@ -10,7 +10,7 @@ from gensim.corpora import Dictionary
 from gensim.models.ldamodel import LdaModel
 from nltk.tokenize import word_tokenize, sent_tokenize
 import nltk
-from transformers import GPT2LMHeadModel, GPT2Tokenizer, AutoModelForCausalLM, AutoTokenizer
+from transformers import GPT2LMHeadModel, GPT2Tokenizer, AutoModelForCausalLM, AutoTokenizer, AutoModel
 import json
 import pandas as pd
 from IntrinsicDimCUDA import PHD
@@ -151,15 +151,15 @@ def get_perplexity_variability(prompt, model, tokenizer, device, chunk_size=50, 
         chunks = sent_tokenize(prompt, language=language)
     else:
         chunks = split_text_into_chunks(prompt, chunk_size)
-    
+
     if len(chunks) < 2:
         return 0  # Not enough segments to compute variance
-    
+
     ppls = []
 
     # Batch tokenize the entire prompt (no need to tokenize each chunk separately)
     prompt_tokens = tokenizer(prompt, return_tensors="pt", padding=True, truncation=True).input_ids.to(device)
-    
+
     # Batch process the chunks
     with t.no_grad():
         for chunk in chunks:
@@ -271,7 +271,7 @@ def get_intrinsic_dimensions(prompt, model, tokenizer, device, min_subsample=40,
     """
     inputs = tokenizer(prompt, return_tensors="pt").to(model.device) #PUT ONTO GPU FOR (CUDA)
     with t.no_grad():
-        outp = model(**inputs).logits[0].cpu() #PUT BACK ONTO CPU (CUDA)
+        outp = model(**inputs).hidden_states[-1][0].cpu() #PUT BACK ONTO CPU (CUDA)
     # We omit the first and last tokens (<CLS> and <SEP> because they do not directly correspond to any part of the)
     mx_points = inputs['input_ids'].shape[1] - 2
 
@@ -354,8 +354,12 @@ device_1 = t.device("cuda")
 
 nltk.download('punkt_tab')  # used for lda burstiness
 nlp_1 = spacy.load("en_core_web_sm")  # used for syntactic burstiness
-model_3 = AutoModelForCausalLM.from_pretrained("ai-forever/mGPT")
+# mGPT
+model_3 = AutoModel.from_pretrained("ai-forever/mGPT", return_dict_in_generate=True, output_hidden_states=True)
+#model_3 = AutoModelForCausalLM.from_config("ai-forever/mGPT", return_dict_in_generate=True, output_hidden_states=True)
 tokenizer_3 = AutoTokenizer.from_pretrained("ai-forever/mGPT")
+
+model_3.eval()
 
 model_3.to(device_1)
 
