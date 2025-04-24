@@ -56,24 +56,19 @@ def merge_csv_splits(file1, file2):
     
     return merged_data
 
-# Example usage:
 file1 = 'text_statistics_trans_1.csv'
 file2 = 'text_statistics_trans_2.csv'
 merged_data = merge_csv_splits(file1, file2)
 
-# Optionally, save the merged data into a new CSV file
 if merged_data:
     with open('merged_file.csv', 'w', newline='') as output_file:
         writer = csv.writer(output_file)
         writer.writerows(merged_data)
 
-print("Merging complete!")
-
 file1 = 'merged_file.csv'
 file2 = 'text_statistics_trans_3.csv'
 merged_data = merge_csv_splits(file1, file2)
 
-# Optionally, save the merged data into a new CSV file
 if merged_data:
     with open('merged_file.csv', 'w', newline='') as output_file:
         writer = csv.writer(output_file)
