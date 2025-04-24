@@ -262,7 +262,7 @@ def get_intrinsic_dimensions(prompt, model, tokenizer, device, min_subsample=40,
     """
     inputs = tokenizer(prompt, return_tensors="pt").to(model.device) #PUT ONTO GPU FOR (CUDA)
     with t.no_grad():
-        outp = model(**inputs).logits[0].cpu() #PUT BACK ONTO CPU (CUDA)
+        outp = model(**inputs).hidden_states[-1][0].cpu() #PUT BACK ONTO CPU (CUDA)
     # We omit the first and last tokens (<CLS> and <SEP> because they do not directly correspond to any part of the)
     mx_points = inputs['input_ids'].shape[1] - 2
 
@@ -353,9 +353,11 @@ nlp_1 = spacy.load("en_core_web_sm")  # used for syntactic burstiness
 #model_2 = AutoModelForCausalLM.from_pretrained("bigscience/bloom-560m")
 #tokenizer_2 = AutoTokenizer.from_pretrained("bigscience/bloom-560m")
 # mGPT
-model_3 = AutoModelForCausalLM.from_pretrained("ai-forever/mGPT")
+model_3 = AutoModelForCausalLM.from_pretrained("ai-forever/mGPT", return_dict_in_generate=True, output_hidden_states=True)
 tokenizer_3 = AutoTokenizer.from_pretrained("ai-forever/mGPT")
 #model_4 = HookedTransformer.from_pretrained("gpt2-medium", device = device_1)
+
+model_3.eval()
 
 model_3.to(device_1)
 
