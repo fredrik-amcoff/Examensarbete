@@ -346,7 +346,6 @@ def get_statistics(text_data, model, tokenizer, device, nlp, output_name, chunk_
     df_combined = pd.concat([df_ai, df_human], ignore_index=True)
     df_combined.to_csv(output_name, index=False, encoding='utf-8')
 
-    print(f'Times: {times}')
     print(f'Total time: {sum(times)}')
 
 
@@ -360,7 +359,7 @@ tokenizer_3 = AutoTokenizer.from_pretrained("ai-forever/mGPT")
 
 model_3.to(device_1)
 
-for j in range(6, 11):
+for j in range(10, 11):
     for i in range(1, 11):
         input_file = f"split_{j}_{i}.json"
         output = f"text_statistics_trans_{j}_{i}.csv"
