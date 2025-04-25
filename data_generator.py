@@ -272,6 +272,56 @@ def sample_articles(num_articles, user_agent, num_paragraphs=3):
     return articles
 
 
+def generate_token_probs(prompt, key, max_tokens=50, top_logprobs=20):
+
+    client = openai.OpenAI(api_key=key)
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": f"Complete the following sentence: {prompt}"}],
+        temperature=1,
+        max_tokens=max_tokens,
+        logprobs=True,
+        top_logprobs=top_logprobs
+    )
+    generated_text = response.choices[0].message.content
+    tokens = response.choices[0].logprobs.content
+    probs = []
+    logprobs = []
+    token_list = []
+    top5 = []
+    for tok in tokens:
+        print(f'\nChosen token: {tok.token} (prob: {np.exp(tok.logprob)})')
+        print(f'\tTop {top_logprobs} tokens:')
+        probs.append(np.exp(tok.logprob))
+        logprobs.append(tok.logprob)
+        token_list.append(tok.token)
+        top5_tok = []
+        for top_token in tok.top_logprobs:
+            print(f'\t{top_token.token} (prob: {np.exp(top_token.logprob)})')
+            top5_tok.append((top_token.token, np.exp(top_token.logprob)))
+        top5.append(top5_tok)
+    return {
+        "generated_text": generated_text,
+        "token_list": token_list,
+        "logprobs": logprobs,
+        "probs": probs,
+        "top5": top5
+    }
+
+
+def test_gen_probs(prompt, num_samples, key, max_tokens=10, top_logprobs=20):
+    """
+    Used for testing the empirical sampling distribution of the generative model. Max tokens should be one more than
+    input tokens
+    """
+    test_list = []
+    for i in range(num_samples):
+        outp = generate_token_probs(prompt, key, max_tokens=max_tokens, top_logprobs=top_logprobs)
+        test_list.append(outp['token_list'][-1])
+
+    print(test_list)
+    print(Counter(test_list))
+
 
 # for user: contact information of the format "<Application Name>/<Version> (<Description>, <Contact Information>)",
 # example: "ReasearchProject/1.0 (University of Uppsala, contact: email.example@student.uu.se)"
