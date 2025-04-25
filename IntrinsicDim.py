@@ -1,13 +1,14 @@
 import numpy as np
-import torch as t
+
 from scipy.spatial.distance import cdist
 from threading import Thread
 
 MINIMAL_CLOUD = 80
 
+
 def prim_tree(adj_matrix, alpha=1.0):
     infty = np.max(adj_matrix) + 10
-    
+
     dst = np.ones(adj_matrix.shape[0]) * infty
     visited = np.zeros(adj_matrix.shape[0], dtype=bool)
     ancestor = -np.ones(adj_matrix.shape[0], dtype=int)
@@ -18,44 +19,16 @@ def prim_tree(adj_matrix, alpha=1.0):
         ancestor[dst > adj_matrix[v]] = v
         dst = np.minimum(dst, adj_matrix[v])
         dst[visited] = infty
-        
+
         v = np.argmin(dst)
         s += (adj_matrix[v][ancestor[v]] ** alpha)
-        
-    return s.item()
-
-
-def prim_tree_cuda(adj_matrix, alpha=1.0):
-    # adj_matrix: (n, n) PyTorch tensor on GPU
-
-    infty = t.max(adj_matrix) + 10
-
-    n = adj_matrix.shape[0]
-    dst = t.full((n,), infty.item(), device=adj_matrix.device)
-    visited = t.zeros(n, dtype=t.bool, device=adj_matrix.device)
-    ancestor = t.full((n,), -1, dtype=t.long, device=adj_matrix.device)
-
-    v, s = 0, 0.0
-
-    for i in range(n - 1):
-        visited[v] = True
-
-        # Update distances and ancestors
-        mask = adj_matrix[v] < dst
-        ancestor[mask] = v
-        dst = t.minimum(dst, adj_matrix[v])
-
-        dst[visited] = infty  # Don't re-visit nodes
-
-        # Choose the next node with the smallest distance
-        v = t.argmin(dst).item()
-        s += adj_matrix[v, ancestor[v]].pow(alpha)
 
     return s.item()
 
 
 def process_string(sss):
     return sss.replace('\n', ' ').replace('  ', ' ')
+
 
 class PHD():
     def __init__(self, alpha=1.0, metric='euclidean', n_reruns=3, n_points=7, n_points_min=3):
@@ -82,7 +55,7 @@ class PHD():
         if self.distance_matrix:
             return W[random_indices][:, random_indices]
         else:
-            return t.tensor(W[random_indices], device="cuda", dtype=t.float32)
+            return W[random_indices]
 
     def _calc_ph_dim_single(self, W, test_n, outp, thread_id):
         lengths = []
@@ -91,27 +64,26 @@ class PHD():
                 restarts = self.n_points_min
             else:
                 restarts = self.n_points
-               
+
             reruns = np.ones(restarts)
             for i in range(restarts):
                 tmp = self._sample_W(W, n)
                 if self.distance_matrix:
-                    reruns[i] = prim_tree_cuda(tmp, self.alpha)
+                    reruns[i] = prim_tree(tmp, self.alpha)
                 else:
-                    dist_matrix = t.cdist(tmp, tmp)
-                    reruns[i] = prim_tree_cuda(dist_matrix, self.alpha)
+                    reruns[i] = prim_tree(cdist(tmp, tmp, metric=self.metric), self.alpha)
 
             lengths.append(np.median(reruns))
         lengths = np.array(lengths)
 
         x = np.log(np.array(list(test_n)))
         y = np.log(lengths)
-        N = len(x)   
+        N = len(x)
         outp[thread_id] = (N * (x * y).sum() - x.sum() * y.sum()) / (N * (x ** 2).sum() - x.sum() ** 2)
-        
+
     def fit_transform(self, X, y=None, min_points=50, max_points=512, point_jump=40, dist=False):
         '''
-        Computing the PH-dim 
+        Computing the PH-dim
         Parameters:
         1) X --- point cloud of shape (n_points, n_features), or precomputed distance matrix (n_points, n_points) if parameter dist set to 'True'
         2) y --- fictional parameter to fit with Sklearn interface

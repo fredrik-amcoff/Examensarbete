@@ -9,6 +9,11 @@ from string import ascii_uppercase
 import pandas as pd
 import csv
 import warnings
+import numpy as np
+import matplotlib.pyplot as plt
+from IPython.display import display, HTML
+import re
+from collections import Counter
 
 
 def count_words(text):
@@ -28,8 +33,8 @@ def generate_text(title, length, key):
     return text_response
 
 
-def get_wikipedia_text(title, user_agent, num_paragraphs=3):
-    wiki = wikipediaapi.Wikipedia(language="en", user_agent=user_agent)
+def get_wikipedia_text(title, user_agent, num_paragraphs=3, language='en'):
+    wiki = wikipediaapi.Wikipedia(language=language, user_agent=user_agent)
     page = wiki.page(title)
     if not page.exists():
         print(f"{title} not found")
@@ -147,6 +152,7 @@ def scrape_vital():
             # Initialize default values
             topic = None
             section = None
+            level = None
 
             # Find the nested <table class="mw-json">
             json_table = row.find('table', class_='mw-json')
@@ -162,18 +168,81 @@ def scrape_vital():
                             topic = value
                         elif key == "section":
                             section = value
+                        elif key == "level":
+                            level = int(value)
 
             # Append the data
             data.append({
                 'Title': title,
                 'Topic': topic,
-                'Section': section
+                'Section': section,
+                'Level': level
             })
 
     df = pd.DataFrame(data)
     df = df.sort_values(by='Title').reset_index(drop=True)
     df.to_csv('vital_articles.csv', index=False)
 
+
+def scrape_swe_vital(user_agent):
+    url = f"https://sv.wikipedia.org/wiki/Wikipedia:Basartiklar"
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text, "html.parser")
+    tables = soup.find_all('table')
+    data = {'title': [], 'num_paragraphs': []}
+    for table in tables[1:]:
+        row = table.find_all('tr')
+        for tr in row[1:]:
+            try:
+                article_name = tr.find_all('td')[0].find('a').get('title')
+                data['title'].append(article_name)
+            except AttributeError:
+                print('Attribute error')
+            except IndexError:
+                print('Index error')
+
+    for article in data['title']:
+        print(article)
+        for i in range(3, 10):
+            art_len = get_wikipedia_text(article, user_agent, num_paragraphs=i, language='sv')[1]
+            print(f'\tTrying {i} paragraphs: {art_len} words.')
+            if art_len >= 200:
+                data['num_paragraphs'].append(i)
+                break
+            data['num_paragraphs'].append(10)
+        print(f'{article}: {data["num_paragraphs"][-1]} paragraphs.\n')
+
+    df = pd.DataFrame(data)
+    df = df.sort_values(by='title').reset_index(drop=True)
+    df.to_csv('vital_articles_swe.csv', index=False)
+
+
+def scrape_swe(num_articles, user_agent):
+    article_titles = []
+    article_lengths = []
+    df = pd.read_csv('vital_articles.csv')
+    df = df[df['Level'] < 5]
+    random_articles = df.sample(n=num_articles)['Title'].tolist()
+    c = 0
+    for i, article in enumerate(random_articles):
+        url = f'https://en.wikipedia.org/wiki/{article.replace(" ", "_")}'
+        response = requests.get(url)
+        soup = BeautifulSoup(response.text, "html.parser")
+        language_tag = soup.find('a', class_='interlanguage-link-target', lang='sv')
+        if language_tag:
+            re_match = re.search(r'(.+) – Swedish', language_tag.get('title'))
+            title = re_match.group(1)
+            art_length = get_wikipedia_text(title, user_agent, num_paragraphs=8, language='sv')[1]
+            if 200 <= art_length <= 500:
+                article_titles.append(title)
+                article_lengths.append(art_length)
+                c += 1
+            print(f'Article title: {title}, \n{i}/{num_articles} ({c} added)')
+
+    data = {'title': article_titles, 'length': article_lengths}
+    df = pd.DataFrame(data)
+    df = df.sort_values(by='title').reset_index(drop=True)
+    df.to_csv('vital_articles_swe.csv', index=False)
 
 def sample_articles(num_articles, user_agent, num_paragraphs=3):
     article_titles = []
@@ -202,6 +271,56 @@ def sample_articles(num_articles, user_agent, num_paragraphs=3):
         attempts += 1
     return articles
 
+
+def generate_token_probs(prompt, key, max_tokens=50, top_logprobs=20):
+
+    client = openai.OpenAI(api_key=key)
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=[{"role": "user", "content": f"Complete the following sentence: {prompt}"}],
+        temperature=1,
+        max_tokens=max_tokens,
+        logprobs=True,
+        top_logprobs=top_logprobs
+    )
+    generated_text = response.choices[0].message.content
+    tokens = response.choices[0].logprobs.content
+    probs = []
+    logprobs = []
+    token_list = []
+    top5 = []
+    for tok in tokens:
+        print(f'\nChosen token: {tok.token} (prob: {np.exp(tok.logprob)})')
+        print(f'\tTop {top_logprobs} tokens:')
+        probs.append(np.exp(tok.logprob))
+        logprobs.append(tok.logprob)
+        token_list.append(tok.token)
+        top5_tok = []
+        for top_token in tok.top_logprobs:
+            print(f'\t{top_token.token} (prob: {np.exp(top_token.logprob)})')
+            top5_tok.append((top_token.token, np.exp(top_token.logprob)))
+        top5.append(top5_tok)
+    return {
+        "generated_text": generated_text,
+        "token_list": token_list,
+        "logprobs": logprobs,
+        "probs": probs,
+        "top5": top5
+    }
+
+
+def test_gen_probs(prompt, num_samples, key, max_tokens=10, top_logprobs=20):
+    """
+    Used for testing the empirical sampling distribution of the generative model. Max tokens should be one more than
+    input tokens
+    """
+    test_list = []
+    for i in range(num_samples):
+        outp = generate_token_probs(prompt, key, max_tokens=max_tokens, top_logprobs=top_logprobs)
+        test_list.append(outp['token_list'][-1])
+
+    print(test_list)
+    print(Counter(test_list))
 
 
 # for user: contact information of the format "<Application Name>/<Version> (<Description>, <Contact Information>)",

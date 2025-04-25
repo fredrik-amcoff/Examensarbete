@@ -1,9 +1,11 @@
 import torch as t
+import torch.nn.functional as F
 import torch_directml
 from typing import Optional, Union
 import matplotlib.pyplot as plt
 import numpy as np
 from transformer_lens import HookedTransformer
+from transformer_lens.utils import test_prompt
 import time
 from collections import Counter
 import spacy
@@ -12,11 +14,13 @@ from gensim.corpora import Dictionary
 from gensim.models.ldamodel import LdaModel
 from nltk.tokenize import word_tokenize
 import nltk
-from transformers import GPT2LMHeadModel, GPT2Tokenizer, AutoModelForCausalLM, AutoTokenizer
+from transformers import GPT2LMHeadModel, GPT2Tokenizer, AutoModelForCausalLM, AutoTokenizer, pipeline, set_seed, AutoModel
 import json
 import pandas as pd
 from IntrinsicDim import PHD
 import re
+from data_generator import generate_token_probs
+
 
 
 def clean_text(text):
@@ -94,6 +98,7 @@ def get_perplexity_data(prompt, model, prnt=True):
     prompt_len = len(prompt_str_tokens)
     token_str = ""
     prob_list = []
+    logprob_list = []
     odds_list = []
     token_list = []
     logit_list = []
@@ -111,6 +116,7 @@ def get_perplexity_data(prompt, model, prnt=True):
             print(prob_results)
         # print(np.log(prob_results[1]/(1-prob_results[1])))
         prob_list.append(prob_results[1])
+        logprob_list.append(np.log(prob_results[1]))
         odds_list.append(np.log(prob_results[1] / (1 - prob_results[1])))
         token_list.append(token)
         logit_list.append(prob_results[0])
@@ -118,10 +124,22 @@ def get_perplexity_data(prompt, model, prnt=True):
         times.append(end_time - start_time)
     return {
         'prob_list': prob_list,
+        'logprob_list': logprob_list,
         'odds_list': odds_list,
         'token_list': token_list,
         'times': times
     }
+
+
+def compare_perplexity_measures(prompt, model, key, max_tokens=50, top_logprobs=5):
+    text_data_pure = generate_token_probs(prompt, key, max_tokens=max_tokens, top_logprobs=top_logprobs)
+    generated_text= text_data_pure['generated_text']
+    logprobs = text_data_pure['logprobs']
+    probs = text_data_pure['probs']
+    text_data_approx = get_perplexity_data(generated_text, model, prnt=True)
+    plt.plot(logprobs)
+    plt.plot(text_data_approx['logprob_list'])
+    plt.show()
 
 
 def get_perplexity(prompt, model, tokenizer, device):
@@ -129,7 +147,7 @@ def get_perplexity(prompt, model, tokenizer, device):
     with t.no_grad():
         outputs = model(input_ids, labels=input_ids)
     loss = outputs.loss
-    #logits = outputs.logits
+    logits = outputs.logits
     perplexity = t.exp(loss).item()
 
     #probs = t.nn.functional.softmax(logits, dim=-1)  # Shape: (batch_size, seq_len, vocab_size)
@@ -234,18 +252,17 @@ def get_lda_burstiness(prompt, num_topics=3, chunk_size=50, chunk_type='standard
     return np.mean(topic_variance, dtype=np.float64)  # Higher variance = more burstiness
 
 
-def get_intrinsic_dimensions(prompt, model, tokenizer, min_subsample=40, intermediate_points=7):
+def get_intrinsic_dimensions(prompt, model, tokenizer, device, min_subsample=40, intermediate_points=7):
     """
-    Note: if either of inp or out is not zero, the other one can't be zero either.
     This function is a modified version from https://github.com/ArGintum/GPTID
     :param prompt: input text
     :param model: input model
     :param tokenizer: input tokenizer
     :return:
     """
-    inputs = tokenizer(prompt, return_tensors="pt")
+    inputs = tokenizer(prompt, return_tensors="pt").to(device)
     with t.no_grad():
-        outp = model(**inputs)[0][0]
+        outp = model(**inputs).hidden_states[-1][0]
     # We omit the first and last tokens (<CLS> and <SEP> because they do not directly correspond to any part of the)
     mx_points = inputs['input_ids'].shape[1] - 2
 
