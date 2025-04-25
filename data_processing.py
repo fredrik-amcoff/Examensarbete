@@ -1,9 +1,11 @@
 import torch as t
+import torch.nn.functional as F
 import torch_directml
 from typing import Optional, Union
 import matplotlib.pyplot as plt
 import numpy as np
 from transformer_lens import HookedTransformer
+from transformer_lens.utils import test_prompt
 import time
 from collections import Counter
 import spacy
@@ -12,11 +14,13 @@ from gensim.corpora import Dictionary
 from gensim.models.ldamodel import LdaModel
 from nltk.tokenize import word_tokenize
 import nltk
-from transformers import GPT2LMHeadModel, GPT2Tokenizer, AutoModelForCausalLM, AutoTokenizer
+from transformers import GPT2LMHeadModel, GPT2Tokenizer, AutoModelForCausalLM, AutoTokenizer, pipeline, set_seed, AutoModel
 import json
 import pandas as pd
 from IntrinsicDim import PHD
 import re
+from data_generator import generate_token_probs
+
 
 
 def clean_text(text):
@@ -94,6 +98,7 @@ def get_perplexity_data(prompt, model, prnt=True):
     prompt_len = len(prompt_str_tokens)
     token_str = ""
     prob_list = []
+    logprob_list = []
     odds_list = []
     token_list = []
     logit_list = []
@@ -111,6 +116,7 @@ def get_perplexity_data(prompt, model, prnt=True):
             print(prob_results)
         # print(np.log(prob_results[1]/(1-prob_results[1])))
         prob_list.append(prob_results[1])
+        logprob_list.append(np.log(prob_results[1]))
         odds_list.append(np.log(prob_results[1] / (1 - prob_results[1])))
         token_list.append(token)
         logit_list.append(prob_results[0])
@@ -118,6 +124,7 @@ def get_perplexity_data(prompt, model, prnt=True):
         times.append(end_time - start_time)
     return {
         'prob_list': prob_list,
+        'logprob_list': logprob_list,
         'odds_list': odds_list,
         'token_list': token_list,
         'times': times
@@ -129,7 +136,7 @@ def get_perplexity(prompt, model, tokenizer, device):
     with t.no_grad():
         outputs = model(input_ids, labels=input_ids)
     loss = outputs.loss
-    #logits = outputs.logits
+    logits = outputs.logits
     perplexity = t.exp(loss).item()
 
     #probs = t.nn.functional.softmax(logits, dim=-1)  # Shape: (batch_size, seq_len, vocab_size)
