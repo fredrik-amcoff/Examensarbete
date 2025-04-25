@@ -298,20 +298,22 @@ def get_statistics(text_data, model, tokenizer, device, nlp, output_name, chunk_
     def collect_statistics(text, label):
         sb_data = get_sentence_burstiness(text)
         return {
-            "perplexity": get_perplexity(text, model, tokenizer, device),
-            "perplexity_std": get_perplexity_variability(text, model, tokenizer, device, chunk_type=chunk_type),
-            "char_std": sb_data["char_std"],
-            "word_std": sb_data["word_std"],
+            #"perplexity": get_perplexity(text, model, tokenizer, device),
+            #"perplexity_std": get_perplexity_variability(text, model, tokenizer, device, chunk_type=chunk_type),
+            #"char_std": sb_data["char_std"],
+            #"word_std": sb_data["word_std"],
             "intrinsic_dimensions": get_intrinsic_dimensions(text, model, tokenizer, device),
-            "temporal_burstiness": get_temporal_burstiness(text),
-            "syntactic_burstiness": get_syntactic_burstiness(text, nlp),
-            "wd_burstiness": get_wd_burstiness(text, chunk_size=chunk_size, chunk_type=chunk_type),
-            "semantic_burstiness": get_lda_burstiness(text, num_topics=num_topics, chunk_size=chunk_size, chunk_type=chunk_type),
+            #"temporal_burstiness": get_temporal_burstiness(text),
+            #"syntactic_burstiness": get_syntactic_burstiness(text, nlp),
+            #"wd_burstiness": get_wd_burstiness(text, chunk_size=chunk_size, chunk_type=chunk_type),
+            #"semantic_burstiness": get_lda_burstiness(text, num_topics=num_topics, chunk_size=chunk_size, chunk_type=chunk_type),
             "ai": label
         }
 
-    measures = ["perplexity", "perplexity_std", "char_std", "word_std", "intrinsic_dimensions", "temporal_burstiness",
-                "syntactic_burstiness", "wd_burstiness", "semantic_burstiness", "ai"]
+    #measures = ["perplexity", "perplexity_std", "char_std", "word_std", "intrinsic_dimensions", "temporal_burstiness",
+    #            "syntactic_burstiness", "wd_burstiness", "semantic_burstiness", "ai"]
+
+    measures = ["intrinsic_dimensions"]
 
     statistics_ai = {key: [] for key in measures}
     statistics_human = {key: [] for key in measures}
@@ -346,7 +348,6 @@ def get_statistics(text_data, model, tokenizer, device, nlp, output_name, chunk_
     df_combined = pd.concat([df_ai, df_human], ignore_index=True)
     df_combined.to_csv(output_name, index=False, encoding='utf-8')
 
-    print(f'Times: {times}')
     print(f'Total time: {sum(times)}')
 
 
@@ -364,8 +365,12 @@ model_3.eval()
 
 model_3.to(device_1)
 
-for j in range(6, 11):
-    for i in range(1, 11):
-        input_file = f"split_{j}_{i}.json"
-        output = f"text_statistics_trans_{j}_{i}.csv"
-        get_statistics(input_file, model_3, tokenizer_3, device_1, nlp_1, output, chunk_type='sliding_window')
+
+
+input_file = f"translated_rnd.json"
+output = f"instrinsic_eng.csv"
+get_statistics(input_file, model_3, tokenizer_3, device_1, nlp_1, output, chunk_type='sliding_window')
+
+input_file = f"translated_rnd_swe_only.json"
+output = f"instrinsic_trans.csv"
+get_statistics(input_file, model_3, tokenizer_3, device_1, nlp_1, output, chunk_type='sliding_window')
