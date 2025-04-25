@@ -33,8 +33,8 @@ def generate_text(title, length, key):
     return text_response
 
 
-def get_wikipedia_text(title, user_agent, num_paragraphs=3):
-    wiki = wikipediaapi.Wikipedia(language="en", user_agent=user_agent)
+def get_wikipedia_text(title, user_agent, num_paragraphs=3, language='en'):
+    wiki = wikipediaapi.Wikipedia(language=language, user_agent=user_agent)
     page = wiki.page(title)
     if not page.exists():
         print(f"{title} not found")
