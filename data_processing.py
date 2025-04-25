@@ -241,18 +241,17 @@ def get_lda_burstiness(prompt, num_topics=3, chunk_size=50, chunk_type='standard
     return np.mean(topic_variance, dtype=np.float64)  # Higher variance = more burstiness
 
 
-def get_intrinsic_dimensions(prompt, model, tokenizer, min_subsample=40, intermediate_points=7):
+def get_intrinsic_dimensions(prompt, model, tokenizer, device, min_subsample=40, intermediate_points=7):
     """
-    Note: if either of inp or out is not zero, the other one can't be zero either.
     This function is a modified version from https://github.com/ArGintum/GPTID
     :param prompt: input text
     :param model: input model
     :param tokenizer: input tokenizer
     :return:
     """
-    inputs = tokenizer(prompt, return_tensors="pt")
+    inputs = tokenizer(prompt, return_tensors="pt").to(device)
     with t.no_grad():
-        outp = model(**inputs)[0][0]
+        outp = model(**inputs).hidden_states[-1][0]
     # We omit the first and last tokens (<CLS> and <SEP> because they do not directly correspond to any part of the)
     mx_points = inputs['input_ids'].shape[1] - 2
 
