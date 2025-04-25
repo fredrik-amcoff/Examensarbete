@@ -152,6 +152,7 @@ def scrape_vital():
             # Initialize default values
             topic = None
             section = None
+            level = None
 
             # Find the nested <table class="mw-json">
             json_table = row.find('table', class_='mw-json')
@@ -167,12 +168,15 @@ def scrape_vital():
                             topic = value
                         elif key == "section":
                             section = value
+                        elif key == "level":
+                            level = int(value)
 
             # Append the data
             data.append({
                 'Title': title,
                 'Topic': topic,
-                'Section': section
+                'Section': section,
+                'Level': level
             })
 
     df = pd.DataFrame(data)
