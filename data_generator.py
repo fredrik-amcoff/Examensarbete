@@ -184,6 +184,66 @@ def scrape_vital():
     df.to_csv('vital_articles.csv', index=False)
 
 
+def scrape_swe_vital(user_agent):
+    url = f"https://sv.wikipedia.org/wiki/Wikipedia:Basartiklar"
+    response = requests.get(url)
+    soup = BeautifulSoup(response.text, "html.parser")
+    tables = soup.find_all('table')
+    data = {'title': [], 'num_paragraphs': []}
+    for table in tables[1:]:
+        row = table.find_all('tr')
+        for tr in row[1:]:
+            try:
+                article_name = tr.find_all('td')[0].find('a').get('title')
+                data['title'].append(article_name)
+            except AttributeError:
+                print('Attribute error')
+            except IndexError:
+                print('Index error')
+
+    for article in data['title']:
+        print(article)
+        for i in range(3, 10):
+            art_len = get_wikipedia_text(article, user_agent, num_paragraphs=i, language='sv')[1]
+            print(f'\tTrying {i} paragraphs: {art_len} words.')
+            if art_len >= 200:
+                data['num_paragraphs'].append(i)
+                break
+            data['num_paragraphs'].append(10)
+        print(f'{article}: {data["num_paragraphs"][-1]} paragraphs.\n')
+
+    df = pd.DataFrame(data)
+    df = df.sort_values(by='title').reset_index(drop=True)
+    df.to_csv('vital_articles_swe.csv', index=False)
+
+
+def scrape_swe(num_articles, user_agent):
+    article_titles = []
+    article_lengths = []
+    df = pd.read_csv('vital_articles.csv')
+    df = df[df['Level'] < 5]
+    random_articles = df.sample(n=num_articles)['Title'].tolist()
+    c = 0
+    for i, article in enumerate(random_articles):
+        url = f'https://en.wikipedia.org/wiki/{article.replace(" ", "_")}'
+        response = requests.get(url)
+        soup = BeautifulSoup(response.text, "html.parser")
+        language_tag = soup.find('a', class_='interlanguage-link-target', lang='sv')
+        if language_tag:
+            re_match = re.search(r'(.+) – Swedish', language_tag.get('title'))
+            title = re_match.group(1)
+            art_length = get_wikipedia_text(title, user_agent, num_paragraphs=8, language='sv')[1]
+            if 200 <= art_length <= 500:
+                article_titles.append(title)
+                article_lengths.append(art_length)
+                c += 1
+            print(f'Article title: {title}, \n{i}/{num_articles} ({c} added)')
+
+    data = {'title': article_titles, 'length': article_lengths}
+    df = pd.DataFrame(data)
+    df = df.sort_values(by='title').reset_index(drop=True)
+    df.to_csv('vital_articles_swe.csv', index=False)
+
 def sample_articles(num_articles, user_agent, num_paragraphs=3):
     article_titles = []
     articles = []
