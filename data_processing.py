@@ -449,7 +449,7 @@ device_1 = t.device("mps" if t.backends.mps.is_available() else "cuda" if t.cuda
 
 
 nltk.download('punkt_tab')  # used for lda burstiness
-nlp_1 = spacy.load("en_core_web_sm")  # used for syntactic burstiness
+nlp_1 = spacy.load("en_core_web_sm")  # CHANGE TO "sv_core_news_sm" FOR SWEDISH
 #model_1 = GPT2LMHeadModel.from_pretrained("gpt2")
 #tokenizer_1 = GPT2Tokenizer.from_pretrained("gpt2")
 # BLOOM
