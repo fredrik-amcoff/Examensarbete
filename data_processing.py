@@ -12,7 +12,7 @@ import spacy
 from sklearn.feature_extraction.text import TfidfVectorizer
 from gensim.corpora import Dictionary
 from gensim.models.ldamodel import LdaModel
-from nltk.tokenize import word_tokenize
+from nltk.tokenize import word_tokenize, sent_tokenize
 import nltk
 from transformers import GPT2LMHeadModel, GPT2Tokenizer, AutoModelForCausalLM, AutoTokenizer, pipeline, set_seed, AutoModel
 import json
@@ -20,6 +20,8 @@ import pandas as pd
 from IntrinsicDim import PHD
 import re
 from data_generator import generate_token_probs
+from difflib import SequenceMatcher
+import lftk
 
 
 
@@ -184,6 +186,110 @@ def get_sentence_burstiness(prompt):
         'char_var': char_var,
         'word_std': word_std,
         'word_var': word_var
+    }
+
+
+def get_syntactic_repetitiveness(prompt, nlp):
+    doc = nlp(prompt)
+    pos_sequences = []
+    lens = 0
+    for sent in doc.sents:
+        pos_seq = " ".join([token.pos_ for token in sent])
+        pos_sequences.append(pos_seq)
+        lens += 1
+
+    similarities = []
+    for i in range(len(pos_sequences) - 1):
+        sim = SequenceMatcher(None, pos_sequences[i], pos_sequences[i + 1]).ratio()
+        similarities.append(sim)
+
+    if similarities:
+        return sum(similarities) / len(similarities)
+    else:
+        return 0
+
+
+def get_unique_words(prompt, nlp):
+    doc = nlp(prompt)
+    extractor = lftk.Extractor(docs=doc)
+    extracted_features = extractor.extract(features=['t_uword', 't_word'])
+    return extracted_features['t_uword'] / extracted_features['t_word']
+
+
+def get_syntactic_depth(prompt, nlp):
+    def sentence_syntactic_depth(sentence):
+        if not sentence:
+            return 0
+        depths_sent = []
+        for token in sentence:
+            depth = 0
+            current = token
+            while current.head != current:  # root node loops to itself
+                depth += 1
+                current = current.head
+            depths_sent.append(depth)
+        return max(depths_sent) if depths_sent else 0
+    doc = nlp(prompt)
+    depths = []
+    for sent in doc.sents:
+        depths.append(sentence_syntactic_depth(sent))
+    return {
+        'depths': depths,
+        'mean_depth': np.mean(depths),
+        'std_depth': np.std(depths),
+        'max_depth': np.max(depths)
+    }
+
+
+def get_word_burstiness(prompt, nlp):
+    doc = nlp(prompt)
+    lemma_list = [token.lemma_ for token in doc]
+    unique_lemma_list = list(set(lemma_list))
+    lemma_counts = []
+    for sent in doc.sents:
+        sent_lemma_list = [token.lemma_ for token in sent]
+        lemma_count = Counter(sent_lemma_list)
+        lemma_counts.append(lemma_count)
+    fano_factors = []
+    for lemma in unique_lemma_list:
+        counts = []
+        for sent in lemma_counts:
+            try:
+                lemma_count = dict(sent)[lemma]
+                counts.append(lemma_count)
+            except KeyError:  # if lemma not in sentence
+                counts.append(0)
+        ff = np.var(counts) / np.mean(counts)
+        fano_factors.append(ff)
+    return {
+        'mean': np.mean(fano_factors),
+        'std': np.std(fano_factors)
+    }
+
+
+def get_syntax_burstiness(prompt, nlp):
+    doc = nlp(prompt)
+    pos_list = [token.pos_ for token in doc]
+    unique_pos_list = list(set(pos_list))
+    pos_counts = []
+    for sent in doc.sents:
+        sent_pos_list = [token.pos_ for token in sent]
+        pos_count = Counter(sent_pos_list)
+        pos_counts.append(pos_count)
+    fano_factors = []
+    for pos in unique_pos_list:
+        counts = []
+        for sent in pos_counts:
+            try:
+                pos_count = dict(sent)[pos]
+                counts.append(pos_count)
+            except KeyError:  # if lemma not in sentence
+                counts.append(0)
+        ff = np.var(counts) / np.mean(counts)
+        fano_factors.append(ff)
+    return {
+        'mean': np.mean(fano_factors),
+        'std': np.std(fano_factors)
     }
 
 
