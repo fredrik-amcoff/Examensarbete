@@ -166,7 +166,7 @@ def get_perplexity(prompt, model, tokenizer, device):
 
 def get_sentence_burstiness(prompt):
     # Split the text into sentences
-    sentences = prompt.split('.')
+    sentences = sent_tokenize(prompt, language=language)
     char_lengths = []
     word_lengths = []
     for sentence in sentences:
@@ -185,7 +185,9 @@ def get_sentence_burstiness(prompt):
         'char_std': char_std,
         'char_var': char_var,
         'word_std': word_std,
-        'word_var': word_var
+        'word_var': word_var,
+        'word_fano_factor': word_var / np.mean(word_lengths),
+        'char_fano_factor': char_var / np.mean(char_lengths)
     }
 
 
