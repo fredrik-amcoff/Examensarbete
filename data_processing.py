@@ -164,7 +164,34 @@ def get_perplexity(prompt, model, tokenizer, device):
     return perplexity
 
 
-def get_sentence_burstiness(prompt):
+def get_perplexity_variability(prompt, model, tokenizer, device, chunk_size=50, chunk_type="standard", language="english"):
+    if chunk_type == 'sliding_window':
+        chunks = split_text_sliding_window(prompt, chunk_size)
+    elif chunk_type == 'sentence':
+        chunks = sent_tokenize(prompt, language=language)
+    else:
+        chunks = split_text_into_chunks(prompt, chunk_size)
+
+    if len(chunks) < 2:
+        return 0  # Not enough segments to compute variance
+
+    ppls = []
+
+    # Batch tokenize the entire prompt (no need to tokenize each chunk separately)
+    prompt_tokens = tokenizer(prompt, return_tensors="pt", padding=True, truncation=True).input_ids.to(device)
+
+    # Batch process the chunks
+    with t.no_grad():
+        for chunk in chunks:
+            chunk_input_ids = tokenizer(chunk, return_tensors="pt", padding=True, truncation=True).input_ids.to(device)
+            # Compute perplexity for each chunk in batch
+            perplexity = get_perplexity(chunk, model, tokenizer, device)
+            ppls.append(perplexity)
+
+    return np.std(ppls)
+
+
+def get_sentence_burstiness(prompt, language='english'):
     # Split the text into sentences
     sentences = sent_tokenize(prompt, language=language)
     char_lengths = []
