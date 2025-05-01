@@ -29,11 +29,16 @@ def clean_text(text):
     # Remove references
     text = re.sub(r"\[\d+\]|\(\d{4}\)", "", text)
     # Remove unwanted characters
-    text = re.sub(r"[^a-zA-Z0-9\s.,!?()'\"-]", "", text)
+    text = re.sub(r"[^a-öA-Ö0-9\s.,!?()'\"-]", "", text)
     # Replace multiple spaces with a single space
     text = re.sub(r"\s+", " ", text)
     # Remove newlines
     text = text.replace('\n', ' ').replace('  ', ' ')
+
+    # Remove artifacts
+    text = re.sub(r"(\.\s)+\.", ".", text)  # Collapse spaced dot sequences to single dot
+    text = re.sub(r"\.{2,}", "", text)  # Remove sequences of 2+ dots
+    text = re.sub(r"-{2,}", "", text)  # Remove sequences of 2+ hyphens
     return text
 
 
