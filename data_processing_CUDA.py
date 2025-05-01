@@ -21,7 +21,10 @@ def clean_text(text):
     # Remove references
     text = re.sub(r"\[\d+\]|\(\d{4}\)", "", text)
     # Remove unwanted characters
-    text = re.sub(r"[^a-zA-Z0-9\s.,!?()'\"-]", "", text)
+
+    #text = re.sub(r"[^a-zA-Z0-9\s.,!?()'\"-]", "", text)
+    text = re.sub(r"[^a-zA-Z0-9åäöÅÄÖ\s.,!?()'\"-]", "", text)
+    
     # Replace multiple spaces with a single space
     text = re.sub(r"\s+", " ", text)
     # Remove newlines
@@ -298,22 +301,20 @@ def get_statistics(text_data, model, tokenizer, device, nlp, output_name, chunk_
     def collect_statistics(text, label):
         sb_data = get_sentence_burstiness(text)
         return {
-            #"perplexity": get_perplexity(text, model, tokenizer, device),
-            #"perplexity_std": get_perplexity_variability(text, model, tokenizer, device, chunk_type=chunk_type),
-            #"char_std": sb_data["char_std"],
-            #"word_std": sb_data["word_std"],
+            "perplexity": get_perplexity(text, model, tokenizer, device),
+            "perplexity_std": get_perplexity_variability(text, model, tokenizer, device, chunk_type=chunk_type),
+            "char_std": sb_data["char_std"],
+            "word_std": sb_data["word_std"],
             "intrinsic_dimensions": get_intrinsic_dimensions(text, model, tokenizer, device),
-            #"temporal_burstiness": get_temporal_burstiness(text),
-            #"syntactic_burstiness": get_syntactic_burstiness(text, nlp),
-            #"wd_burstiness": get_wd_burstiness(text, chunk_size=chunk_size, chunk_type=chunk_type),
-            #"semantic_burstiness": get_lda_burstiness(text, num_topics=num_topics, chunk_size=chunk_size, chunk_type=chunk_type),
+            "temporal_burstiness": get_temporal_burstiness(text),
+            "syntactic_burstiness": get_syntactic_burstiness(text, nlp),
+            "wd_burstiness": get_wd_burstiness(text, chunk_size=chunk_size, chunk_type=chunk_type),
+            "semantic_burstiness": get_lda_burstiness(text, num_topics=num_topics, chunk_size=chunk_size, chunk_type=chunk_type),
             "ai": label
         }
 
-    #measures = ["perplexity", "perplexity_std", "char_std", "word_std", "intrinsic_dimensions", "temporal_burstiness",
-    #            "syntactic_burstiness", "wd_burstiness", "semantic_burstiness", "ai"]
-
-    measures = ["intrinsic_dimensions"]
+    measures = ["perplexity", "perplexity_std", "char_std", "word_std", "intrinsic_dimensions", "temporal_burstiness",
+                "syntactic_burstiness", "wd_burstiness", "semantic_burstiness", "ai"]
 
     statistics_ai = {key: [] for key in measures}
     statistics_human = {key: [] for key in measures}
@@ -357,8 +358,8 @@ device_1 = t.device("cuda")
 nltk.download('punkt_tab')  # used for lda burstiness
 nlp_1 = spacy.load("en_core_web_sm")  # used for syntactic burstiness
 # mGPT
-model_3 = AutoModel.from_pretrained("ai-forever/mGPT", return_dict_in_generate=True, output_hidden_states=True)
-#model_3 = AutoModelForCausalLM.from_config("ai-forever/mGPT", return_dict_in_generate=True, output_hidden_states=True)
+#model_3 = AutoModel.from_pretrained("ai-forever/mGPT", return_dict_in_generate=True, output_hidden_states=True)
+model_3 = AutoModelForCausalLM.from_pretrained("ai-forever/mGPT", return_dict_in_generate=True, output_hidden_states=True)
 tokenizer_3 = AutoTokenizer.from_pretrained("ai-forever/mGPT")
 
 model_3.eval()
@@ -367,10 +368,6 @@ model_3.to(device_1)
 
 
 
-input_file = f"translated_rnd.json"
-output = f"instrinsic_eng.csv"
-get_statistics(input_file, model_3, tokenizer_3, device_1, nlp_1, output, chunk_type='sliding_window')
-
-input_file = f"translated_rnd_swe_only.json"
-output = f"instrinsic_trans.csv"
+input_file = f"text_data_swe.json"
+output = f"text_statistics_swe.csv"
 get_statistics(input_file, model_3, tokenizer_3, device_1, nlp_1, output, chunk_type='sliding_window')
