@@ -12,7 +12,7 @@ import spacy
 from sklearn.feature_extraction.text import TfidfVectorizer
 from gensim.corpora import Dictionary
 from gensim.models.ldamodel import LdaModel
-from nltk.tokenize import word_tokenize
+from nltk.tokenize import word_tokenize, sent_tokenize
 import nltk
 from transformers import GPT2LMHeadModel, GPT2Tokenizer, AutoModelForCausalLM, AutoTokenizer, pipeline, set_seed, AutoModel
 import json
@@ -20,6 +20,8 @@ import pandas as pd
 from IntrinsicDim import PHD
 import re
 from data_generator import generate_token_probs
+from difflib import SequenceMatcher
+import lftk
 
 
 
@@ -27,11 +29,16 @@ def clean_text(text):
     # Remove references
     text = re.sub(r"\[\d+\]|\(\d{4}\)", "", text)
     # Remove unwanted characters
-    text = re.sub(r"[^a-zA-Z0-9\s.,!?()'\"-]", "", text)
+    text = re.sub(r"[^a-öA-Ö0-9\s.,!?()'\"-]", "", text)
     # Replace multiple spaces with a single space
     text = re.sub(r"\s+", " ", text)
     # Remove newlines
     text = text.replace('\n', ' ').replace('  ', ' ')
+
+    # Remove artifacts
+    text = re.sub(r"(\.\s)+\.", ".", text)  # Collapse spaced dot sequences to single dot
+    text = re.sub(r"\.{2,}", "", text)  # Remove sequences of 2+ dots
+    text = re.sub(r"-{2,}", "", text)  # Remove sequences of 2+ hyphens
     return text
 
 
@@ -162,9 +169,36 @@ def get_perplexity(prompt, model, tokenizer, device):
     return perplexity
 
 
-def get_sentence_burstiness(prompt):
+def get_perplexity_variability(prompt, model, tokenizer, device, chunk_size=50, chunk_type="standard", language="english"):
+    if chunk_type == 'sliding_window':
+        chunks = split_text_sliding_window(prompt, chunk_size)
+    elif chunk_type == 'sentence':
+        chunks = sent_tokenize(prompt, language=language)
+    else:
+        chunks = split_text_into_chunks(prompt, chunk_size)
+
+    if len(chunks) < 2:
+        return 0  # Not enough segments to compute variance
+
+    ppls = []
+
+    # Batch tokenize the entire prompt (no need to tokenize each chunk separately)
+    prompt_tokens = tokenizer(prompt, return_tensors="pt", padding=True, truncation=True).input_ids.to(device)
+
+    # Batch process the chunks
+    with t.no_grad():
+        for chunk in chunks:
+            chunk_input_ids = tokenizer(chunk, return_tensors="pt", padding=True, truncation=True).input_ids.to(device)
+            # Compute perplexity for each chunk in batch
+            perplexity = get_perplexity(chunk, model, tokenizer, device)
+            ppls.append(perplexity)
+
+    return np.std(ppls)
+
+
+def get_sentence_burstiness(prompt, language='english'):
     # Split the text into sentences
-    sentences = prompt.split('.')
+    sentences = sent_tokenize(prompt, language=language)
     char_lengths = []
     word_lengths = []
     for sentence in sentences:
@@ -183,7 +217,113 @@ def get_sentence_burstiness(prompt):
         'char_std': char_std,
         'char_var': char_var,
         'word_std': word_std,
-        'word_var': word_var
+        'word_var': word_var,
+        'word_fano_factor': word_var / np.mean(word_lengths),
+        'char_fano_factor': char_var / np.mean(char_lengths)
+    }
+
+
+def get_syntactic_repetitiveness(prompt, nlp):
+    doc = nlp(prompt)
+    pos_sequences = []
+    lens = 0
+    for sent in doc.sents:
+        pos_seq = " ".join([token.pos_ for token in sent])
+        pos_sequences.append(pos_seq)
+        lens += 1
+
+    similarities = []
+    for i in range(len(pos_sequences) - 1):
+        sim = SequenceMatcher(None, pos_sequences[i], pos_sequences[i + 1]).ratio()
+        similarities.append(sim)
+
+    if similarities:
+        return sum(similarities) / len(similarities)
+    else:
+        return 0
+
+
+def get_unique_words(prompt, nlp):
+    doc = nlp(prompt)
+    extractor = lftk.Extractor(docs=doc)
+    extracted_features = extractor.extract(features=['t_uword', 't_word'])
+    return extracted_features['t_uword'] / extracted_features['t_word']
+
+
+def get_syntactic_depth(prompt, nlp):
+    def sentence_syntactic_depth(sentence):
+        if not sentence:
+            return 0
+        depths_sent = []
+        for token in sentence:
+            depth = 0
+            current = token
+            while current.head != current:  # root node loops to itself
+                depth += 1
+                current = current.head
+            depths_sent.append(depth)
+        return max(depths_sent) if depths_sent else 0
+    doc = nlp(prompt)
+    depths = []
+    for sent in doc.sents:
+        depths.append(sentence_syntactic_depth(sent))
+    return {
+        'depths': depths,
+        'mean_depth': np.mean(depths),
+        'std_depth': np.std(depths),
+        'max_depth': np.max(depths)
+    }
+
+
+def get_word_burstiness(prompt, nlp):
+    doc = nlp(prompt)
+    lemma_list = [token.lemma_ for token in doc]
+    unique_lemma_list = list(set(lemma_list))
+    lemma_counts = []
+    for sent in doc.sents:
+        sent_lemma_list = [token.lemma_ for token in sent]
+        lemma_count = Counter(sent_lemma_list)
+        lemma_counts.append(lemma_count)
+    fano_factors = []
+    for lemma in unique_lemma_list:
+        counts = []
+        for sent in lemma_counts:
+            try:
+                lemma_count = dict(sent)[lemma]
+                counts.append(lemma_count)
+            except KeyError:  # if lemma not in sentence
+                counts.append(0)
+        ff = np.var(counts) / np.mean(counts)
+        fano_factors.append(ff)
+    return {
+        'mean': np.mean(fano_factors),
+        'std': np.std(fano_factors)
+    }
+
+
+def get_syntax_burstiness(prompt, nlp):
+    doc = nlp(prompt)
+    pos_list = [token.pos_ for token in doc]
+    unique_pos_list = list(set(pos_list))
+    pos_counts = []
+    for sent in doc.sents:
+        sent_pos_list = [token.pos_ for token in sent]
+        pos_count = Counter(sent_pos_list)
+        pos_counts.append(pos_count)
+    fano_factors = []
+    for pos in unique_pos_list:
+        counts = []
+        for sent in pos_counts:
+            try:
+                pos_count = dict(sent)[pos]
+                counts.append(pos_count)
+            except KeyError:  # if lemma not in sentence
+                counts.append(0)
+        ff = np.var(counts) / np.mean(counts)
+        fano_factors.append(ff)
+    return {
+        'mean': np.mean(fano_factors),
+        'std': np.std(fano_factors)
     }
 
 
@@ -343,7 +483,7 @@ device_1 = t.device("mps" if t.backends.mps.is_available() else "cuda" if t.cuda
 
 
 nltk.download('punkt_tab')  # used for lda burstiness
-nlp_1 = spacy.load("en_core_web_sm")  # used for syntactic burstiness
+nlp_1 = spacy.load("en_core_web_sm")  # CHANGE TO "sv_core_news_sm" FOR SWEDISH
 #model_1 = GPT2LMHeadModel.from_pretrained("gpt2")
 #tokenizer_1 = GPT2Tokenizer.from_pretrained("gpt2")
 # BLOOM
