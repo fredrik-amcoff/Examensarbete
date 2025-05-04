@@ -3,6 +3,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
+import spacy
+from spacy import displacy
+from nltk import Tree
+import pydot
 
 
 def sample_matched_pairs(df, n_pairs=1000):
@@ -16,6 +20,17 @@ def sample_matched_pairs(df, n_pairs=1000):
     human_samples = df.iloc[sampled_indices + half]
     matched_df = pd.concat([ai_samples, human_samples], ignore_index=True)
     return matched_df
+
+
+def remove_outliers(df, variable, threshold=5):
+    q1 = df[variable].quantile(0.25)
+    q3 = df[variable].quantile(0.75)
+    iqr = q3 - q1
+    lower_bound = q1 - threshold * iqr
+    upper_bound = q3 + threshold * iqr
+    df = df[(df[variable] >= lower_bound) & (df[variable] <= upper_bound)]
+    return df
+
 
 def generate_html_prompt(token_list, probs, top5, prob_threshold=0.7):
     """
@@ -81,15 +96,20 @@ def generate_text_len_graph():
     plt.show()
 
 
-def generate_data_hist(variable, file_name, bins=100, savepng=False, show=False, ax=None):
+def generate_data_hist(variable, file_name, bins=100, savepng=False, show=False, ax=None, iqr_threshold=5):
     df = pd.read_csv(file_name)
-
+    df = remove_outliers(df, variable, iqr_threshold)
     data_min = df[variable].min()
     data_max = df[variable].max()
     bin_edges = np.linspace(data_min, data_max, bins + 1)
 
     ai = df[df['ai'] == 1]
     human = df[df['ai'] == 0]
+    print(f'AI mean: {round(np.mean(ai[variable].tolist()), 3)}')
+    print(f'AI std: {round(np.std(ai[variable].tolist()), 3)}')
+    print(f'Human mean: {round(np.mean(human[variable].tolist()), 3)}')
+    print(f'Human std: {round(np.std(human[variable].tolist()), 3)}')
+
 
     if ax is None:
         plt.figure(figsize=(10,6))
@@ -102,7 +122,7 @@ def generate_data_hist(variable, file_name, bins=100, savepng=False, show=False,
     ax.tick_params(axis='both', labelsize=10)
     ax.set_xlabel(var_names[variable], size=15)
     ax.set_ylabel('Density', size=15)
-    ax.legend(fontsize=17.5)
+    ax.legend(fontsize=15)
 
     if savepng is True and ax is plt.gca():  # only save if standalone
         plt.savefig(f'Figures/{variable}_hist.png')
@@ -113,7 +133,6 @@ def generate_data_hist(variable, file_name, bins=100, savepng=False, show=False,
 def generate_data_scatter(variable, file_name, n=1000, savepng=False, show=False, ax=None):
     df = pd.read_csv(file_name)
     sample = sample_matched_pairs(df, n)
-    print(sample)
 
     ai = sample[sample['ai'] == 1]
     human = sample[sample['ai'] == 0]
@@ -144,11 +163,11 @@ def generate_data_scatter(variable, file_name, n=1000, savepng=False, show=False
         plt.show()
 
 
-def generate_data_subplots(variables, file_name, n=1000, bins=100, savepng=False):
+def generate_data_subplots(variables, file_name, file_name_2, n=1000, bins=100, savepng=False, iqr_threshold=5):
     fig, axes = plt.subplots(2, len(variables), figsize=(5 * len(variables), 10))
 
     for col, variable in enumerate(variables):
-        generate_data_hist(variable, file_name, ax=axes[0, col], bins=bins)
+        generate_data_hist(variable, file_name, ax=axes[0, col], bins=bins, iqr_threshold=iqr_threshold)
         generate_data_scatter(variable, file_name, ax=axes[1, col], n=n)
 
     plt.tight_layout()
