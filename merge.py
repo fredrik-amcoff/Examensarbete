@@ -56,6 +56,9 @@ def merge_csv_splits(file1, file2):
     
     return merged_data
 
+
+
+
 file1 = 'text_statistics_trans_1.csv'
 file2 = 'text_statistics_trans_2.csv'
 merged_data = merge_csv_splits(file1, file2)
@@ -65,23 +68,12 @@ if merged_data:
         writer = csv.writer(output_file)
         writer.writerows(merged_data)
 
-file1 = 'merged_file.csv'
-file2 = 'text_statistics_trans_3.csv'
-merged_data = merge_csv_splits(file1, file2)
+for i in range(3, 11):
+    file1 = 'merged_file.csv'
+    file2 = f'text_statistics_trans_{i}.csv'
+    merged_data = merge_csv_splits(file1, file2)
 
-if merged_data:
-    with open('merged_file.csv', 'w', newline='') as output_file:
-        writer = csv.writer(output_file)
-        writer.writerows(merged_data)
-
-for j in range(4, 11):
-    for i in range(1, 11):
-        file1 = 'merged_file.csv'
-        file2 = f'text_statistics_trans_{j}_{i}.csv'
-        merged_data = merge_csv_splits(file1, file2)
-
-        # Optionally, save the merged data into a new CSV file
-        if merged_data:
-            with open('merged_file.csv', 'w', newline='') as output_file:
-                writer = csv.writer(output_file)
-                writer.writerows(merged_data)
+    if merged_data:
+        with open('merged_file.csv', 'w', newline='') as output_file:
+            writer = csv.writer(output_file)
+            writer.writerows(merged_data)

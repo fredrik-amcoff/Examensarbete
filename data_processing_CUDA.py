@@ -367,7 +367,7 @@ model_3.eval()
 model_3.to(device_1)
 
 
-
-input_file = f"text_data_swe.json"
-output = f"text_statistics_swe.csv"
-get_statistics(input_file, model_3, tokenizer_3, device_1, nlp_1, output, chunk_type='sliding_window')
+for i in range(1, 11):
+    input_file = f"translated_rnd_swe_only_{i}.json"
+    output = f"text_statistics_trans_{i}.csv"
+    get_statistics(input_file, model_3, tokenizer_3, device_1, nlp_1, output, chunk_type='sliding_window')
