@@ -176,6 +176,27 @@ def generate_data_subplots(variables, file_name, file_name_2, n=1000, bins=100, 
     plt.show()
 
 
+def generate_dependency_tree(sentence):
+    nlp = spacy.load('en_core_web_sm')
+    doc = nlp(sentence)
+    graph = pydot.Dot("dep_tree", graph_type="digraph", rankdir="TB", fontsize="10")
+
+    # Add nodes
+    for token in doc:
+        graph.add_node(pydot.Node(
+            str(token.i),
+            label=f"{token.text}\n({token.dep_})",
+            shape="plaintext"))
+
+    # Add edges (dependencies)
+    for token in doc:
+        if token.head != token:
+            graph.add_edge(pydot.Edge(str(token.head.i), str(token.i)))
+
+    # Write to PNG
+    output_path = "Figures/dep_tree.png"
+    graph.write(output_path, format="png")
+
 
 
 var_names = {'perplexity': 'Perplexity',
