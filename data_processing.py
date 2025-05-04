@@ -225,22 +225,22 @@ def get_sentence_burstiness(prompt, language='english'):
 
 def get_syntactic_repetitiveness(prompt, nlp):
     doc = nlp(prompt)
-    pos_sequences = []
-    lens = 0
-    for sent in doc.sents:
-        pos_seq = " ".join([token.pos_ for token in sent])
-        pos_sequences.append(pos_seq)
-        lens += 1
+    pos_sequences = [
+        " ".join([token.pos_ for token in sent])
+        for sent in doc.sents
+    ]
+
+    n = len(pos_sequences)
+    if n < 2:
+        return 0  # not enough data to compare
 
     similarities = []
-    for i in range(len(pos_sequences) - 1):
-        sim = SequenceMatcher(None, pos_sequences[i], pos_sequences[i + 1]).ratio()
-        similarities.append(sim)
+    for i in range(n):
+        for j in range(i + 1, n):  # all unique pairs
+            sim = SequenceMatcher(None, pos_sequences[i], pos_sequences[j]).ratio()
+            similarities.append(sim)
 
-    if similarities:
-        return sum(similarities) / len(similarities)
-    else:
-        return 0
+    return np.mean(similarities)
 
 
 def get_unique_words(prompt, nlp):
