@@ -27,24 +27,7 @@ df_eval_eng = df_eval_eng.drop(['title', 'topic', 'section', 'words', 'chars'], 
 df_eval_trans = df_eval_trans.drop(['title', 'topic', 'section', 'words', 'chars'], axis=1)
 df_eval_sv = df_eval_sv.drop(['title', 'words', 'chars'], axis=1)
 
-#split
-y_train_eng = df_train_eng["ai"]
-X_train_eng = df_train_eng.drop("ai", axis=1)
-
-y_train_trans = df_train_trans["ai"]
-X_train_trans = df_train_trans.drop("ai", axis=1)
-
-y_eval_eng = df_eval_eng["ai"]
-X_eval_eng = df_eval_eng.drop("ai", axis=1)
-
-y_eval_trans = df_eval_trans["ai"]
-X_eval_trans = df_eval_trans.drop("ai", axis=1)
-
-y_eval_sv = df_eval_sv["ai"]
-X_eval_sv = df_eval_sv.drop("ai", axis=1)
-
 def run_model(train_set, eval_set):
-
     #split
     y_train = train_set["ai"]
     X_train = train_set.drop("ai", axis=1)
