@@ -43,24 +43,36 @@ X_eval_trans = df_eval_trans.drop("ai", axis=1)
 y_eval_sv = df_eval_sv["ai"]
 X_eval_sv = df_eval_sv.drop("ai", axis=1)
 
-#initialize model
-rf = RandomForestClassifier(n_estimators=100, max_depth=20, random_state=42) #set hyperparameters
+def run_model(train_set, eval_set):
 
-#train
-rf.fit(X_train_eng, y_train_eng)
+    #split
+    y_train = train_set["ai"]
+    X_train = train_set.drop("ai", axis=1)
 
-#evaluate ENG --> ENG
-y_pred = rf.predict(X_eval_eng)
+    y_eval = eval_set["ai"]
+    X_eval = eval_set.drop("ai", axis=1)
 
-accuracy = accuracy_score(y_eval_eng, y_pred)
-precision = precision_score(y_eval_eng, y_pred)
-recall = recall_score(y_eval_eng, y_pred)
-f1 = f1_score(y_eval_eng, y_pred)
+    #initialize model
+    rf = RandomForestClassifier(n_estimators=100, max_depth=20, random_state=42) #set hyperparameters
 
-print(f"Accuracy: {accuracy:.2f}")
-print(f"Precision: {precision:.2f}")
-print(f"Recall: {recall:.2f}")
-print(f"F1 Score: {f1:.2f}")
+    #train
+    rf.fit(X_train, y_train)
 
-conf_matrix = confusion_matrix(y_eval_eng, y_pred)
-print(conf_matrix)
+    #evaluate ENG --> ENG
+    y_pred = rf.predict(X_eval)
+
+    accuracy = accuracy_score(y_eval, y_pred)
+    precision = precision_score(y_eval, y_pred)
+    recall = recall_score(y_eval, y_pred)
+    f1 = f1_score(y_eval, y_pred)
+
+    print(f"Accuracy: {accuracy:.2f}")
+    print(f"Precision: {precision:.2f}")
+    print(f"Recall: {recall:.2f}")
+    print(f"F1 Score: {f1:.2f}")
+
+    conf_matrix = confusion_matrix(y_eval, y_pred)
+    print(conf_matrix)
+
+
+run_model(df_train_eng, df_eval_eng)
