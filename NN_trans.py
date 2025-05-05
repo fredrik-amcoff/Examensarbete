@@ -28,29 +28,33 @@ y_eval_tensor = torch.tensor(y_eval, dtype=torch.float32).unsqueeze(1)
 
 #Prepare dataset and dataloader
 train_dataset = TensorDataset(X_train, y_train)
-train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)  #HYPERPARAM: Batch size
+train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)                   #HYPERPARAM: batch size
 
 class FeedforwardNN(nn.Module):
-    def __init__(self, input_size, hidden_size, output_size): #HYPERPARAM: number of layers
+    def __init__(self, input_size, hidden_size_1, hidden_size_2, output_size):          #HYPERPARAM: number of layers
         super(FeedforwardNN, self).__init__()
-        self.fc1 = nn.Linear(input_size, hidden_size)  #First fully connected layer
-        self.relu = nn.ReLU()                         #Fctivation function for above layer
-        self.fc2 = nn.Linear(hidden_size, output_size)  #Output layer
+        self.fc1 = nn.Linear(input_size, hidden_size_1)
+        self.relu1 = nn.ReLU()                                                          #HYPERPARAM: activation function
+        self.fc2 = nn.Linear(hidden_size_1, hidden_size_2)
+        self.relu2 = nn.ReLU()
+        self.fc3 = nn.Linear(hidden_size_2, output_size)
 
     def forward(self, x):
-        out = self.fc1(x)
-        out = self.relu(out)
-        out = self.fc2(out)
-        return out
+            out = self.fc1(x)
+            out = self.relu1(out)
+            out = self.fc2(out)
+            out = self.relu2(out)
+            out = self.fc3(out)
+            return out
 
 #Initialization
-model = FeedforwardNN(input_size=X_train.shape[1], hidden_size=20, output_size=1) #HYPERPARAM: layer sizes
-criterion = nn.BCEWithLogitsLoss() #HYPERPARAM: loss function
-optimizer = optim.Adam(model.parameters(), lr=0.001) #HYPERPARAM: learning rate, optimizer choice
+model = FeedforwardNN(input_size=X_train.shape[1], hidden_size_1=128, hidden_size_2=128, output_size=1) #HYPERPARAM: layer sizes
+criterion = nn.BCEWithLogitsLoss()                                                #HYPERPARAM: loss function
+optimizer = optim.Adam(model.parameters(), lr=0.0001)                              #HYPERPARAM: learning rate, optimizer choice
 
 #Training loop
 model.train()
-for epoch in range(100): #HYPERPARAM: Epochs
+for epoch in range(100):                                                          #HYPERPARAM: Epochs
     for batch_X, batch_y in train_loader:
         optimizer.zero_grad()
         outputs = model(batch_X)
