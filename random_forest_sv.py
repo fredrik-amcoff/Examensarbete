@@ -4,10 +4,18 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 
 #load training data
-df_train = pd.read_csv('text_statistics_trans.csv')
-df_eval = pd.read_csv('text_statistics_swe.csv') #Can use all 10k articles for training because of eval split
+df_train = pd.read_csv('text_statistics_sv_complete.csv')
+df_eval = pd.read_csv('text_statistics_eval_complete.csv') #Can use all 10k articles for training because of eval split
 
-#split off y
+#remove old features
+df_train = df_train.drop(['char_std', 'word_std', 'temporal_burstiness', 'syntactic_burstiness', 'wd_burstiness', 'semantic_burstiness'], axis=1)
+df_eval = df_eval.drop(['char_std', 'word_std', 'temporal_burstiness', 'syntactic_burstiness', 'wd_burstiness', 'semantic_burstiness'], axis=1)
+
+#remove non-numeric
+df_train = df_train.drop(['title', 'topic', 'section', 'words', 'chars'], axis=1)
+df_eval = df_eval.drop(['title', 'words', 'chars'], axis=1)
+
+#split
 y_train = df_train["ai"]
 X_train = df_train.drop("ai", axis=1)
 

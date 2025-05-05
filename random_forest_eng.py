@@ -4,7 +4,13 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 
 #load training data
-df_train = pd.read_csv('text_statistics_eng.csv')
+df_train = pd.read_csv('text_statistics_eng_complete.csv')
+
+#remove old features
+df_train = df_train.drop(['char_std', 'word_std', 'temporal_burstiness', 'syntactic_burstiness', 'wd_burstiness', 'semantic_burstiness'], axis=1)
+
+#remove non-numeric
+df_train = df_train.drop(['title', 'topic', 'section', 'words', 'chars'], axis=1)
 
 #split features and target
 X = df_train.drop("ai", axis=1)

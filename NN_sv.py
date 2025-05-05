@@ -10,6 +10,15 @@ from sklearn.preprocessing import StandardScaler
 df_train = pd.read_csv('text_statistics_trans.csv')
 df_eval = pd.read_csv('text_statistics_swe.csv')
 
+#remove old features
+df_train = df_train.drop(['char_std', 'word_Std', 'temporal_burstiness', 'syntactic_burstiness', 'wd_burstiness', 'semantic_burstiness'], axis=1)
+df_eval = df_eval.drop(['char_std', 'word_Std', 'temporal_burstiness', 'syntactic_burstiness', 'wd_burstiness', 'semantic_burstiness'], axis=1)
+
+#remove non-numeric
+df_train = df_train.drop(['title', 'topic', 'section', 'words', 'chars'], axis=1)
+df_eval = df_eval.drop(['title', 'topic', 'section', 'words', 'chars'], axis=1)
+
+#split
 y_train = df_train["ai"].values
 X_train = df_train.drop("ai", axis=1).values
 y_eval = df_eval["ai"].values
@@ -50,7 +59,7 @@ class FeedforwardNN(nn.Module):
 #Initialization
 model = FeedforwardNN(input_size=X_train.shape[1], hidden_size_1=128, hidden_size_2=128, output_size=1) #HYPERPARAM: layer sizes
 criterion = nn.BCEWithLogitsLoss()                                                #HYPERPARAM: loss function
-optimizer = optim.Adam(model.parameters(), lr=0.0001)                              #HYPERPARAM: learning rate, optimizer choice
+optimizer = optim.Adam(model.parameters(), lr=0.001)                              #HYPERPARAM: learning rate, optimizer choice
 
 #Training loop
 model.train()
