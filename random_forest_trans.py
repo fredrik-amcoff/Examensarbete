@@ -5,7 +5,7 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 
 #load training data
 df_train = pd.read_csv('text_statistics_trans.csv')
-df_eval = pd.read_csv('text_statistics_swe.csv') #Can use all 10k articles for trainin because of eval split
+df_eval = pd.read_csv('text_statistics_swe.csv') #Can use all 10k articles for training because of eval split
 
 #split off y
 y_train = df_train["ai"]
@@ -15,7 +15,7 @@ y_eval = df_eval["ai"]
 X_eval = df_eval.drop("ai", axis=1)
 
 #initialize model
-rf = RandomForestClassifier(n_estimators=5, max_depth=20, random_state=42) #set hyperparameters
+rf = RandomForestClassifier(n_estimators=100, max_depth=20, random_state=42) #set hyperparameters
 
 #train
 rf.fit(X_train, y_train)
