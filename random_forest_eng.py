@@ -4,20 +4,25 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 
 #load training data
-df_train = pd.read_csv('text_statistics_eng_complete.csv')
+df_train_eng = pd.read_csv('text_stats_eng_train.csv')
+df_train_sv = pd.read_csv('text_stats_sv_train(trans).csv')
+
+df_eval_eng = pd.read_csv('text_stats_eng_eval.csv')
 
 #remove old features
 df_train = df_train.drop(['char_std', 'word_std', 'temporal_burstiness', 'syntactic_burstiness', 'wd_burstiness', 'semantic_burstiness'], axis=1)
+df_eval = df_eval.drop(['char_std', 'word_std', 'temporal_burstiness', 'syntactic_burstiness', 'wd_burstiness', 'semantic_burstiness'], axis=1)
 
 #remove non-numeric
 df_train = df_train.drop(['title', 'topic', 'section', 'words', 'chars'], axis=1)
+df_eval = df_eval.drop(['title', 'topic', 'section', 'words', 'chars'], axis=1)
 
-#split features and target
-X = df_train.drop("ai", axis=1)
-y = df_train["ai"]
+#split
+y_train = df_train["ai"]
+X_train = df_train.drop("ai", axis=1)
 
-#90/10 train-test split
-X_train, X_eval, y_train, y_eval = train_test_split(X, y, test_size=0.1, random_state=42) #OBS: only uses 9k articles for training
+y_eval = df_eval["ai"]
+X_eval = df_eval.drop("ai", axis=1)
 
 #initialize model
 rf = RandomForestClassifier(n_estimators=100, max_depth=20, random_state=42) #set hyperparameters
@@ -25,7 +30,7 @@ rf = RandomForestClassifier(n_estimators=100, max_depth=20, random_state=42) #se
 #train
 rf.fit(X_train, y_train)
 
-#evaluate
+#evaluate ENG --> ENG
 y_pred = rf.predict(X_eval)
 
 accuracy = accuracy_score(y_eval, y_pred)
