@@ -290,7 +290,7 @@ def get_word_burstiness(prompt, nlp):
         for sent in lemma_counts:
             try:
                 lemma_count = dict(sent)[lemma]
-                counts.append(lemma_count)
+                counts.append(lemma_count / len(sent))
             except KeyError:  # if lemma not in sentence
                 counts.append(0)
         ff = np.var(counts) / np.mean(counts)
