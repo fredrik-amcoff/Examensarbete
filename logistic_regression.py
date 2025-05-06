@@ -56,4 +56,4 @@ def run_model(train_set, eval_set):
     print(conf_matrix)
 
 
-run_model(train_eng, eval_swe)
+run_model(train_eng, eval_eng)
