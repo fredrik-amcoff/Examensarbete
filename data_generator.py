@@ -328,4 +328,3 @@ def test_gen_probs(prompt, num_samples, key, max_tokens=10, top_logprobs=20):
 user = ""
 token = ""
 
-store_data_from_random(5000, token, user)
