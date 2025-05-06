@@ -1,5 +1,5 @@
 import pandas as pd
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 
 #load training data
@@ -35,19 +35,19 @@ def run_model(train_set, eval_set):
     X_eval = eval_set.drop("ai", axis=1)
 
     #initialize model
-    rf = RandomForestClassifier(n_estimators=100, max_depth=20, random_state=42) #set hyperparameters
-
+    lr = LogisticRegression()
     #train
-    rf.fit(X_train, y_train)
+    lr.fit(X_train, y_train)
 
     #evaluate ENG --> ENG
-    y_pred = rf.predict(X_eval)
+    y_pred = lr.predict(X_eval)
 
     accuracy = accuracy_score(y_eval, y_pred)
     precision = precision_score(y_eval, y_pred)
     recall = recall_score(y_eval, y_pred)
     f1 = f1_score(y_eval, y_pred)
     conf_matrix = confusion_matrix(y_eval, y_pred)
+
 
     print(f"Accuracy: {accuracy:.2f}")
     print(f"Precision: {precision:.2f}")
@@ -56,4 +56,4 @@ def run_model(train_set, eval_set):
     print(conf_matrix)
 
 
-run_model(train_trans, eval_swe)
+run_model(train_eng, eval_swe)
