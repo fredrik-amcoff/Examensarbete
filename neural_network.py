@@ -101,13 +101,11 @@ def run_model(train_set, eval_set, batch, rate, epochs, hidden_1, hidden_2, thre
     print(f"Precision: {precision:.4f}")
     print(f"Recall: {recall:.4f}")
     print(f"F1 Score: {f1:.4f}")
-
-    conf_matrix = confusion_matrix(y_eval, preds)
     print(conf_matrix)
 
-run_model(train_set=train_eng, eval_set=eval_eng, batch=32, rate=0.001, epochs=100, hidden_1=64, hidden_2=64, threshold=0.5)
+run_model(train_set=train_trans, eval_set=eval_trans, batch=32, rate=0.0002094937373001936, epochs=50, hidden_1=64, hidden_2=128, threshold=0.5)
 
-#Hyperparams from random seach using 80/20 test split from training data and 100 iterations.
+#Hyperparams from random seach using 80/20 test split from training data and 20 iterations.
 
 #ENG HYPERPARAMETERS: (train_set=train_eng, eval_set=eval_eng, batch=32, rate=0.0002094937373001936, epochs=50, hidden_1=64, hidden_2=128, threshold=0.5)
 #batch_size = random.choice([16, 32, 64, 128])

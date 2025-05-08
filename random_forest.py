@@ -57,7 +57,7 @@ def run_model(train_set, eval_set, n, depth, threshold):
     print(conf_matrix)
 
 
-run_model(train_set=train_eng, eval_set=eval_eng, n=89, depth=18, threshold=0.5)
+run_model(train_set=train_trans, eval_set=eval_trans, n=89, depth=18, threshold=0.5)
 
 #Hyperparams from random seach using 80/20 test split from training data and 100 iterations.
 

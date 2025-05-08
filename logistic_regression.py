@@ -62,7 +62,7 @@ def run_model(train_set, eval_set, C, penalty, iter, threshold):
     print(f"F1 Score: {f1:.4f}")
     print(conf_matrix)
 
-run_model(train_set=train_trans, eval_set=eval_swe, C=2.27697025538168, penalty="l1", iter=100, threshold=0.5)
+run_model(train_set=train_eng, eval_set=eval_swe, C=385.1107002325569, penalty="l1", iter=100, threshold=0.5)
 
 #Hyperparams from random seach using 80/20 test split from training data and 100 iterations.
 
