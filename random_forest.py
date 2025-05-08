@@ -26,7 +26,7 @@ eval_eng = eval_eng.drop(['title', 'topic', 'section', 'words', 'chars'], axis=1
 eval_trans = eval_trans.drop(['title', 'topic', 'section', 'words', 'chars'], axis=1)
 eval_swe = eval_swe.drop(['title', 'words', 'chars'], axis=1)
 
-def run_model(train_set, eval_set):
+def run_model(train_set, eval_set, n, depth, threshold):
     #split
     y_train = train_set["ai"]
     X_train = train_set.drop("ai", axis=1)
@@ -35,13 +35,14 @@ def run_model(train_set, eval_set):
     X_eval = eval_set.drop("ai", axis=1)
 
     #initialize model
-    rf = RandomForestClassifier(n_estimators=100, max_depth=20, random_state=42) #set hyperparameters
+    rf = RandomForestClassifier(n_estimators=n, max_depth=depth, random_state=42)
 
     #train
     rf.fit(X_train, y_train)
 
-    #evaluate ENG --> ENG
-    y_pred = rf.predict(X_eval)
+    #evaluate
+    y_probs = rf.predict_proba(X_eval)[:, 1]
+    y_pred = (y_probs >= threshold).astype(int) #adjust to re-balance between precision/recall
 
     accuracy = accuracy_score(y_eval, y_pred)
     precision = precision_score(y_eval, y_pred)
@@ -56,4 +57,4 @@ def run_model(train_set, eval_set):
     print(conf_matrix)
 
 
-run_model(train_trans, eval_swe)
+run_model(train_set=train_eng, eval_set=eval_swe, n=100, depth=20, threshold=0.3)

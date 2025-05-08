@@ -30,7 +30,7 @@ eval_eng = eval_eng.drop(['title', 'topic', 'section', 'words', 'chars'], axis=1
 eval_trans = eval_trans.drop(['title', 'topic', 'section', 'words', 'chars'], axis=1)
 eval_swe = eval_swe.drop(['title', 'words', 'chars'], axis=1)
 
-def run_model(train_set, eval_set):
+def run_model(train_set, eval_set, batch, rate, epochs, threshold):
     #split
     y_train = train_set["ai"].values
     X_train = train_set.drop("ai", axis=1).values
@@ -50,7 +50,7 @@ def run_model(train_set, eval_set):
 
     #Prepare dataset and dataloader
     train_dataset = TensorDataset(X_train, y_train)
-    train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)                   #HYPERPARAM: batch size
+    train_loader = DataLoader(train_dataset, batch_size=batch, shuffle=True)
 
     class FeedforwardNN(nn.Module):
         def __init__(self, input_size, hidden_size_1, hidden_size_2, output_size):          #HYPERPARAM: number of layers
@@ -71,12 +71,12 @@ def run_model(train_set, eval_set):
 
     #Initialization
     model = FeedforwardNN(input_size=X_train.shape[1], hidden_size_1=64, hidden_size_2=64, output_size=1) #HYPERPARAM: layer sizes
-    criterion = nn.BCEWithLogitsLoss()                                                #HYPERPARAM: loss function
-    optimizer = optim.Adam(model.parameters(), lr=0.001)                              #HYPERPARAM: learning rate, optimizer choice
+    criterion = nn.BCEWithLogitsLoss()                                                                    #HYPERPARAM: loss function
+    optimizer = optim.Adam(model.parameters(), lr=rate)                                                   #HYPERPARAM: optimizer choice
 
     #Training loop
     model.train()
-    for epoch in range(100):                                                          #HYPERPARAM: Epochs
+    for epoch in range(epochs):
         for batch_X, batch_y in train_loader:
             optimizer.zero_grad()
             outputs = model(batch_X)
@@ -89,7 +89,7 @@ def run_model(train_set, eval_set):
     with torch.no_grad():
         logits = model(X_eval)
         probs = torch.sigmoid(logits)
-        preds = (probs > 0.5).int().numpy()
+        preds = (probs > threshold).int().numpy()
 
     accuracy = accuracy_score(y_eval, preds)
     precision = precision_score(y_eval, preds)
@@ -105,4 +105,4 @@ def run_model(train_set, eval_set):
     conf_matrix = confusion_matrix(y_eval, preds)
     print(conf_matrix)
 
-run_model(train_eng, eval_swe)
+run_model(train_set=train_eng, eval_set=eval_eng, batch=64, rate=0.001, epochs=100, threshold=0.5)

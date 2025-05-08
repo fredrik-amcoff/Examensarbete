@@ -26,7 +26,7 @@ eval_eng = eval_eng.drop(['title', 'topic', 'section', 'words', 'chars'], axis=1
 eval_trans = eval_trans.drop(['title', 'topic', 'section', 'words', 'chars'], axis=1)
 eval_swe = eval_swe.drop(['title', 'words', 'chars'], axis=1)
 
-def run_model(train_set, eval_set):
+def run_model(train_set, eval_set, threshold):
     #split
     y_train = train_set["ai"]
     X_train = train_set.drop("ai", axis=1)
@@ -39,8 +39,9 @@ def run_model(train_set, eval_set):
     #train
     lr.fit(X_train, y_train)
 
-    #evaluate ENG --> ENG
-    y_pred = lr.predict(X_eval)
+    #evaluate
+    y_probs = lr.predict_proba(X_eval)[:, 1]
+    y_pred = (y_probs >= threshold).astype(int) #adjust to re-balance between precision/recall
 
     accuracy = accuracy_score(y_eval, y_pred)
     precision = precision_score(y_eval, y_pred)
@@ -56,4 +57,4 @@ def run_model(train_set, eval_set):
     print(conf_matrix)
 
 
-run_model(train_eng, eval_eng)
+run_model(train_set=train_eng, eval_set=eval_swe, threshold=0.5)
