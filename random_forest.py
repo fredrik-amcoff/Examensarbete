@@ -42,7 +42,7 @@ def run_model(train_set, eval_set, n, depth, threshold):
 
     #evaluate
     y_probs = rf.predict_proba(X_eval)[:, 1]
-    y_pred = (y_probs >= threshold).astype(int) #adjust to re-balance between precision/recall
+    y_pred = (y_probs >= threshold).astype(int)
 
     accuracy = accuracy_score(y_eval, y_pred)
     precision = precision_score(y_eval, y_pred)
@@ -50,11 +50,21 @@ def run_model(train_set, eval_set, n, depth, threshold):
     f1 = f1_score(y_eval, y_pred)
     conf_matrix = confusion_matrix(y_eval, y_pred)
 
-    print(f"Accuracy: {accuracy:.2f}")
-    print(f"Precision: {precision:.2f}")
-    print(f"Recall: {recall:.2f}")
-    print(f"F1 Score: {f1:.2f}")
+    print(f"Accuracy: {accuracy:.4f}")
+    print(f"Precision: {precision:.4f}")
+    print(f"Recall: {recall:.4f}")
+    print(f"F1 Score: {f1:.4f}")
     print(conf_matrix)
 
 
-run_model(train_set=train_eng, eval_set=eval_swe, n=100, depth=20, threshold=0.3)
+run_model(train_set=train_eng, eval_set=eval_eng, n=89, depth=18, threshold=0.5)
+
+#Hyperparams from random seach using 80/20 test split from training data and 100 iterations.
+
+#ENG HYPERPARAMETERS: (train_set=train_eng, eval_set=eval_eng, n=89, depth=18, threshold=0.5)
+#Generally little difference for different parameters (except very low values)
+#'n_estimators': range(1, 500, 1)
+#'max_depth': range(1, 100, 1)
+
+#TRANSLATED HYPERPARAMETERS: (train_set=train_trans, eval_set=eval_swe, n=56, depth=33, threshold=0.5)
+#Same random search arguments

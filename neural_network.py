@@ -30,7 +30,7 @@ eval_eng = eval_eng.drop(['title', 'topic', 'section', 'words', 'chars'], axis=1
 eval_trans = eval_trans.drop(['title', 'topic', 'section', 'words', 'chars'], axis=1)
 eval_swe = eval_swe.drop(['title', 'words', 'chars'], axis=1)
 
-def run_model(train_set, eval_set, batch, rate, epochs, threshold):
+def run_model(train_set, eval_set, batch, rate, epochs, hidden_1, hidden_2, threshold):
     #split
     y_train = train_set["ai"].values
     X_train = train_set.drop("ai", axis=1).values
@@ -52,11 +52,11 @@ def run_model(train_set, eval_set, batch, rate, epochs, threshold):
     train_dataset = TensorDataset(X_train, y_train)
     train_loader = DataLoader(train_dataset, batch_size=batch, shuffle=True)
 
-    class FeedforwardNN(nn.Module):
-        def __init__(self, input_size, hidden_size_1, hidden_size_2, output_size):          #HYPERPARAM: number of layers
+    class FeedforwardNN(nn.Module):                                                        #HYPERPARAM: number of layers, activation functions
+        def __init__(self, input_size, hidden_size_1, hidden_size_2, output_size):
             super(FeedforwardNN, self).__init__()
             self.fc1 = nn.Linear(input_size, hidden_size_1)
-            self.relu1 = nn.ReLU()                                                          #HYPERPARAM: activation function
+            self.relu1 = nn.ReLU()
             self.fc2 = nn.Linear(hidden_size_1, hidden_size_2)
             self.relu2 = nn.ReLU()
             self.fc3 = nn.Linear(hidden_size_2, output_size)
@@ -70,9 +70,9 @@ def run_model(train_set, eval_set, batch, rate, epochs, threshold):
                 return out
 
     #Initialization
-    model = FeedforwardNN(input_size=X_train.shape[1], hidden_size_1=64, hidden_size_2=64, output_size=1) #HYPERPARAM: layer sizes
-    criterion = nn.BCEWithLogitsLoss()                                                                    #HYPERPARAM: loss function
-    optimizer = optim.Adam(model.parameters(), lr=rate)                                                   #HYPERPARAM: optimizer choice
+    model = FeedforwardNN(input_size=X_train.shape[1], hidden_size_1=hidden_1, hidden_size_2=hidden_2, output_size=1)
+    criterion = nn.BCEWithLogitsLoss()                                                                      #HYPERPARAM: loss function
+    optimizer = optim.Adam(model.parameters(), lr=rate)                                                     #HYPERPARAM: optimizer choice
 
     #Training loop
     model.train()
@@ -97,12 +97,24 @@ def run_model(train_set, eval_set, batch, rate, epochs, threshold):
     f1 = f1_score(y_eval, preds)
     conf_matrix = confusion_matrix(y_eval, preds)
 
-    print(f"Accuracy: {accuracy:.2f}")
-    print(f"Precision: {precision:.2f}")
-    print(f"Recall: {recall:.2f}")
-    print(f"F1 Score: {f1:.2f}")
+    print(f"Accuracy: {accuracy:.4f}")
+    print(f"Precision: {precision:.4f}")
+    print(f"Recall: {recall:.4f}")
+    print(f"F1 Score: {f1:.4f}")
 
     conf_matrix = confusion_matrix(y_eval, preds)
     print(conf_matrix)
 
-run_model(train_set=train_eng, eval_set=eval_eng, batch=64, rate=0.001, epochs=100, threshold=0.5)
+run_model(train_set=train_eng, eval_set=eval_eng, batch=32, rate=0.001, epochs=100, hidden_1=64, hidden_2=64, threshold=0.5)
+
+#Hyperparams from random seach using 80/20 test split from training data and 100 iterations.
+
+#ENG HYPERPARAMETERS: (train_set=train_eng, eval_set=eval_eng, batch=32, rate=0.0002094937373001936, epochs=50, hidden_1=64, hidden_2=128, threshold=0.5)
+#batch_size = random.choice([16, 32, 64, 128])
+#lr = 10**np.random.uniform(-4, -2)
+#epochs = random.choice([50, 100, 150, 200])
+#h1 = random.choice([32, 64, 128])
+#h2 = random.choice([32, 64, 128])
+
+#TRANSLATED HYPERPARAMETERS: (train_set=train_eng, eval_set=eval_eng, batch=128, rate=0.0008701372822602438, epochs=100, hidden_1=32, hidden_2=64, threshold=0.5)
+#Same random search arguments
