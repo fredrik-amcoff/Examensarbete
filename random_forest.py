@@ -1,6 +1,8 @@
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
+import matplotlib.pyplot as plt
+import numpy as np
 
 #load training data
 train_eng = pd.read_csv('text_stats_eng_train.csv')
@@ -26,7 +28,7 @@ eval_eng = eval_eng.drop(['title', 'topic', 'section', 'words', 'chars'], axis=1
 eval_trans = eval_trans.drop(['title', 'topic', 'section', 'words', 'chars'], axis=1)
 eval_swe = eval_swe.drop(['title', 'words', 'chars'], axis=1)
 
-def run_model(train_set, eval_set, n, depth, threshold):
+def run_model(train_set, eval_set, n, depth, threshold, csv):
     #split
     y_train = train_set["ai"]
     X_train = train_set.drop("ai", axis=1)
@@ -56,8 +58,12 @@ def run_model(train_set, eval_set, n, depth, threshold):
     print(f"F1 Score: {f1:.4f}")
     print(conf_matrix)
 
+    if csv == True:
+         pd.Series(y_probs).to_csv('predictions_forest.csv', index=False)
 
-run_model(train_set=train_trans, eval_set=eval_trans, n=89, depth=18, threshold=0.5)
+
+run_model(train_set=train_trans, eval_set=eval_swe, n=56, depth=33, threshold=0.5, csv=True)
+
 
 #Hyperparams from random seach using 80/20 test split from training data and 100 iterations.
 
@@ -68,3 +74,5 @@ run_model(train_set=train_trans, eval_set=eval_trans, n=89, depth=18, threshold=
 
 #TRANSLATED HYPERPARAMETERS: (train_set=train_trans, eval_set=eval_swe, n=56, depth=33, threshold=0.5)
 #Same random search arguments
+
+#Threshold for higher f1 on eng --> swe: 0.3

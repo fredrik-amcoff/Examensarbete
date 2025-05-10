@@ -2,6 +2,8 @@ import pandas as pd
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 from sklearn.preprocessing import RobustScaler
+import matplotlib.pyplot as plt
+import numpy as np
 
 #load training data
 train_eng = pd.read_csv('text_stats_eng_train.csv')
@@ -27,7 +29,7 @@ eval_eng = eval_eng.drop(['title', 'topic', 'section', 'words', 'chars'], axis=1
 eval_trans = eval_trans.drop(['title', 'topic', 'section', 'words', 'chars'], axis=1)
 eval_swe = eval_swe.drop(['title', 'words', 'chars'], axis=1)
 
-def run_model(train_set, eval_set, C, penalty, iter, threshold):
+def run_model(train_set, eval_set, C, penalty, iter, threshold, csv):
     #Split
     y_train = train_set["ai"]
     X_train = train_set.drop("ai", axis=1)
@@ -62,14 +64,22 @@ def run_model(train_set, eval_set, C, penalty, iter, threshold):
     print(f"F1 Score: {f1:.4f}")
     print(conf_matrix)
 
-run_model(train_set=train_eng, eval_set=eval_swe, C=385.1107002325569, penalty="l1", iter=100, threshold=0.5)
+    if csv == True:
+        pd.Series(y_probs).to_csv('predictions_logistic.csv', index=False)
+
+
+run_model(train_set=train_trans, eval_set=eval_swe, C=2.27697025538168, penalty="l1", iter=100, threshold=0.5, csv=True)
+
 
 #Hyperparams from random seach using 80/20 test split from training data and 100 iterations.
 
-#ENG HYPERPARAMETERS: (train_set=train_eng, eval_set=eval_eng, C=385.1107002325569, penalty="l1", iter=100, threshold=0.5)
+#ENG HYPERPARAMETERS: (train_set=train_eng, eval_set=eval_swe, C=385.1107002325569, penalty="l1", iter=100, threshold=0.038, csv=True)
 #'C': np.logspace(-3, 3, 20)
 #penalty': ['l1', 'l2']
 #max_iter': [50, 100, 200] (converged at 100)
 
-#TRANSLATED HYPERPARAMETERS: (train_set=train_trans, eval_set=eval_swe, C=2.27697025538168, penalty="l1", iter=100, threshold=0.5)
+#TRANSLATED HYPERPARAMETERS: (train_set=train_trans, eval_set=eval_swe, C=2.27697025538168, penalty="l1", iter=100, threshold=0.5, csv=True)
 #Same random search arguments
+
+#Threshold for higher f1 on eng --> swe: 0.04
+

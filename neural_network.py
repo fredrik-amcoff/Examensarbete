@@ -5,6 +5,8 @@ from torch.utils.data import TensorDataset, DataLoader
 import pandas as pd
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 from sklearn.preprocessing import StandardScaler
+import matplotlib.pyplot as plt
+import numpy as np
 
 #load training data
 train_eng = pd.read_csv('text_stats_eng_train.csv')
@@ -30,7 +32,7 @@ eval_eng = eval_eng.drop(['title', 'topic', 'section', 'words', 'chars'], axis=1
 eval_trans = eval_trans.drop(['title', 'topic', 'section', 'words', 'chars'], axis=1)
 eval_swe = eval_swe.drop(['title', 'words', 'chars'], axis=1)
 
-def run_model(train_set, eval_set, batch, rate, epochs, hidden_1, hidden_2, threshold):
+def run_model(train_set, eval_set, batch, rate, epochs, hidden_1, hidden_2, threshold, csv):
     #split
     y_train = train_set["ai"].values
     X_train = train_set.drop("ai", axis=1).values
@@ -89,6 +91,7 @@ def run_model(train_set, eval_set, batch, rate, epochs, hidden_1, hidden_2, thre
     with torch.no_grad():
         logits = model(X_eval)
         probs = torch.sigmoid(logits)
+        probs_np = probs.numpy().flatten() #for plotting
         preds = (probs > threshold).int().numpy()
 
     accuracy = accuracy_score(y_eval, preds)
@@ -103,7 +106,12 @@ def run_model(train_set, eval_set, batch, rate, epochs, hidden_1, hidden_2, thre
     print(f"F1 Score: {f1:.4f}")
     print(conf_matrix)
 
-run_model(train_set=train_trans, eval_set=eval_trans, batch=32, rate=0.0002094937373001936, epochs=50, hidden_1=64, hidden_2=128, threshold=0.5)
+    if csv == True:
+        pd.Series(probs_np).to_csv('predictions_neural.csv', index=False)
+
+
+run_model(train_set=train_trans, eval_set=eval_swe, batch=128, rate=0.0008701372822602438, epochs=100, hidden_1=32, hidden_2=64, threshold=0.5, csv=True)
+
 
 #Hyperparams from random seach using 80/20 test split from training data and 20 iterations.
 
@@ -114,5 +122,5 @@ run_model(train_set=train_trans, eval_set=eval_trans, batch=32, rate=0.000209493
 #h1 = random.choice([32, 64, 128])
 #h2 = random.choice([32, 64, 128])
 
-#TRANSLATED HYPERPARAMETERS: (train_set=train_eng, eval_set=eval_eng, batch=128, rate=0.0008701372822602438, epochs=100, hidden_1=32, hidden_2=64, threshold=0.5)
+#TRANSLATED HYPERPARAMETERS: (train_set=train_trans, eval_set=eval_swe, batch=128, rate=0.0008701372822602438, epochs=100, hidden_1=32, hidden_2=64, threshold=0.5)
 #Same random search arguments
