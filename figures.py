@@ -7,6 +7,8 @@ import spacy
 from spacy import displacy
 from nltk import Tree
 import pydot
+from sklearn.preprocessing import StandardScaler
+from scipy import stats
 
 
 def sample_matched_pairs(df, n_pairs=1000):
@@ -96,7 +98,7 @@ def generate_text_len_graph():
     plt.show()
 
 
-def generate_data_hist(variable, file_name, bins=100, savepng=False, show=False, ax=None, iqr_threshold=5):
+def generate_data_hist(variable, file_name, bins=100, savepng=False, show=False, ax=None, iqr_threshold=5, xlabel=True, ylabel=True, legend=True, scale=False):
     df = pd.read_csv(file_name)
     df = remove_outliers(df, variable, iqr_threshold)
     data_min = df[variable].min()
@@ -105,10 +107,11 @@ def generate_data_hist(variable, file_name, bins=100, savepng=False, show=False,
 
     ai = df[df['ai'] == 1]
     human = df[df['ai'] == 0]
+    print(f'{var_names[variable]}:')
     print(f'AI mean: {round(np.mean(ai[variable].tolist()), 3)}')
     print(f'AI std: {round(np.std(ai[variable].tolist()), 3)}')
     print(f'Human mean: {round(np.mean(human[variable].tolist()), 3)}')
-    print(f'Human std: {round(np.std(human[variable].tolist()), 3)}')
+    print(f'Human std: {round(np.std(human[variable].tolist()), 3)}\n')
 
 
     if ax is None:
@@ -118,11 +121,18 @@ def generate_data_hist(variable, file_name, bins=100, savepng=False, show=False,
     ax.hist(ai[variable], bins=bin_edges, alpha=0.5, label='AI-generated', edgecolor='black', density=True)
     ax.hist(human[variable], bins=bin_edges, alpha=0.5, label='Human written', edgecolor='black', density=True)
 
+    ymax = max(ax.get_ylim()[1], ax.get_ylim()[1])
+
+    ax.vlines(np.mean(ai[variable].tolist()), ax.get_ylim()[0], ymax, linestyles='dashed', color='red', alpha=0.75)
+    ax.vlines(np.mean(human[variable].tolist()), ax.get_ylim()[0], ymax, linestyles='dashed', color='red', alpha=0.75)
     ax.grid(True)
     ax.tick_params(axis='both', labelsize=10)
-    ax.set_xlabel(var_names[variable], size=15)
-    ax.set_ylabel('Density', size=15)
-    ax.legend(fontsize=15)
+    if xlabel:
+        ax.set_xlabel(var_names[variable], size=16)
+    if ylabel:
+        ax.set_ylabel('Density', size=16)
+    if legend:
+        ax.legend(fontsize=15)
 
     if savepng is True and ax is plt.gca():  # only save if standalone
         plt.savefig(f'Figures/{variable}_hist.png')
@@ -197,14 +207,35 @@ def generate_data_kde(variable, file_name, savepng=False, show=False, ax=None, i
 
 def generate_data_subplots(variables, file_name, file_name_2, n=1000, bins=100, savepng=False, iqr_threshold=5, kde=False, bw_adjust=0.3):
     fig, axes = plt.subplots(2, len(variables), figsize=(5 * len(variables), 10))
-
     for col, variable in enumerate(variables):
-        generate_data_hist(variable, file_name, ax=axes[0, col], bins=bins, iqr_threshold=iqr_threshold)
-        generate_data_scatter(variable, file_name, ax=axes[1, col], n=n)
+        ylabel = False
+        if col == 0:
+            ylabel = True
+        if kde:
+            generate_data_kde(variable, file_name, ax=axes[0, col], iqr_threshold=iqr_threshold, xlabel=False, ylabel=ylabel, legend=False, bw_adjust=bw_adjust)
+            generate_data_kde(variable, file_name_2, ax=axes[1, col], iqr_threshold=iqr_threshold, xlabel=True, ylabel=ylabel, legend=False, bw_adjust=bw_adjust)
+        else:
+            generate_data_hist(variable, file_name, ax=axes[0, col], bins=bins, iqr_threshold=iqr_threshold, xlabel=False, ylabel=ylabel, legend=False)
+            generate_data_hist(variable, file_name_2, ax=axes[1, col], bins=bins, iqr_threshold=iqr_threshold, xlabel=True, ylabel=ylabel, legend=False)
 
-    plt.tight_layout()
+    handles, labels = axes[0, 0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc='lower center', ncol=2, fontsize=18)
+    plt.tight_layout(rect=[0.05, 0.05, 1.0, 1.0])
+
+    row_labels = ['English', 'Swedish']
+    for row, label in enumerate(row_labels):
+        fig.text(0.04, 0.75 - row * 0.42, label, ha='center', va='center', rotation='vertical', fontsize=28)
+
+    # set equal xlims
+    for col in range(len(variables)):
+        xlims = [axes[row, col].get_xlim() for row in range(2)]
+        print(xlims)
+        xmin = min(x[0] for x in xlims)
+        xmax = max(x[1] for x in xlims)
+        for row in range(2):
+            axes[row, col].set_xlim(xmin, xmax)
     if savepng is True and axes is not None:
-        plt.savefig(f'Figures/{"-".join(variables)}-subplot.png')
+        plt.savefig(f'Figures/{"-".join(variables)}-subplot_hist_only.png')
     plt.show()
 
 
@@ -295,5 +326,9 @@ var_names = {'perplexity': 'Perplexity',
              'wd_burstiness': 'Word distribution burstiness (OLD)',
              'syntactic_burstiness': 'Syntactic burstiness (OLD)'}
 
-var = ['perplexity', 'perplexity_std', 'intrinsic_dimensions']
-generate_data_subplots(var, 'text_statistics_eng_all.csv', savepng=True)
+var1 = ['perplexity', 'perplexity_std', 'intrinsic_dimensions']
+var2 = ['word_burstiness', 'syntax_burstiness', 'sentence_burstiness']
+var3 = ['unique_words', 'syntactic_depth', 'syntactic_repetitiveness']
+#calculate_ttests('text_statistics_sv_complete.csv', 'syntactic_depth')
+#generate_data_subplots(var3, 'text_statistics_eng_complete.csv', 'text_statistics_sv_complete.csv', savepng=True, iqr_threshold=5, bins=75, kde=True)
+generate_pair_plots("text_statistics_eval_complete.csv")
