@@ -163,7 +163,39 @@ def generate_data_scatter(variable, file_name, n=1000, savepng=False, show=False
         plt.show()
 
 
-def generate_data_subplots(variables, file_name, file_name_2, n=1000, bins=100, savepng=False, iqr_threshold=5):
+def generate_data_kde(variable, file_name, savepng=False, show=False, ax=None, iqr_threshold=5, xlabel=True, ylabel=True, legend=True, bw_adjust=0.3):
+    df = pd.read_csv(file_name)
+    df = remove_outliers(df, variable, iqr_threshold)
+
+    if ax is None:
+        plt.figure(figsize=(10,6))
+        ax = plt.gca()
+
+    ai = df[df['ai'] == 1]
+    human = df[df['ai'] == 0]
+
+    sns.kdeplot(ai[variable].values, ax=ax, label='AI-written', color='blue', fill=True, alpha=0.5, bw_adjust=0.3)
+    sns.kdeplot(human[variable].values, ax=ax, label='Human-written', color='orange', fill=True, alpha=0.5, bw_adjust=0.3)
+
+    ymax = max(ax.get_ylim()[1], ax.get_ylim()[1])
+    ax.vlines(np.mean(ai[variable].tolist()), ax.get_ylim()[0], ymax, linestyles='dashed', color='red', alpha=0.75)
+    ax.vlines(np.mean(human[variable].tolist()), ax.get_ylim()[0], ymax, linestyles='dashed', color='red', alpha=0.75)
+
+    ax.grid(True)
+    ax.tick_params(axis='both', labelsize=10)
+    if xlabel:
+        ax.set_xlabel(var_names[variable], size=16)
+    if ylabel:
+        ax.set_ylabel('Density', size=16)
+    if legend:
+        ax.legend(fontsize=15)
+    if savepng is True and ax is plt.gca():  # only save if standalone
+        plt.savefig(f'Figures/{variable}_hist.png')
+    if show is True and ax is plt.gca():
+        plt.show()
+
+
+def generate_data_subplots(variables, file_name, file_name_2, n=1000, bins=100, savepng=False, iqr_threshold=5, kde=False, bw_adjust=0.3):
     fig, axes = plt.subplots(2, len(variables), figsize=(5 * len(variables), 10))
 
     for col, variable in enumerate(variables):
@@ -196,6 +228,54 @@ def generate_dependency_tree(sentence):
     # Write to PNG
     output_path = "Figures/dep_tree.png"
     graph.write(output_path, format="png")
+
+
+def calculate_ttests(file_name, variable):
+    df = pd.read_csv(file_name)
+    ai = df[df['ai'] == 1]
+    human = df[df['ai'] == 0]
+    ai_var = ai[variable].to_numpy()
+    human_var = human[variable].to_numpy()
+    t_stat, p_value = stats.ttest_rel(ai_var, human_var)
+    diff = human_var - ai_var
+    diff_mean = np.mean(diff)
+    diff_std = np.std(diff, ddof=1)
+    cohen_d = diff_mean/diff_std
+    print(f'Mean of differences: {diff_mean:.2f}')
+    print(f'Std.error: {diff_std:.2f}')
+    print(f't-value: {t_stat:.2f}')
+    print(f'p-value: {p_value:.3f}')
+    print(f"Cohen's d: {cohen_d:.2f}")
+
+
+def generate_pair_plots(file_path):
+    df = pd.read_csv(file_path)
+    df = sample_matched_pairs(df, 200)
+    numerical_columns = [col for col in df.columns if col not in ['ai','title', 'topic', 'section', 'char_std',
+                                                                  'word_std', 'temporal_burstiness',
+                                                                  'syntactic_burstiness', 'wd_burstiness',
+                                                                  'semantic_burstiness', 'words', 'chars']]
+    sns.set_theme(style="whitegrid")
+
+    # Create pairplot with category-based coloring
+    g = sns.pairplot(df, vars=numerical_columns, hue="ai", palette={0: "orange", 1: "blue"}, plot_kws={'alpha': 0.4})
+    output_path = 'pair_plot.png'
+    g.savefig(output_path, dpi=300)
+    plt.show()
+
+
+def generate_heat_map(file_name):
+    df = pd.read_csv(file_name)
+    numerical_df = df[['perplexity', 'perplexity_std', 'intrinsic_dimensions', 'sentence_burstiness', 'word_burstiness',
+                       'syntax_burstiness', 'unique_words', 'syntactic_depth', 'syntactic_repetitiveness', 'words',
+                       'chars']]
+    correlation_matrix = numerical_df.corr()
+    print(correlation_matrix.to_string())
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(correlation_matrix, annot=False, cmap='coolwarm', linewidths=0.5)
+    plt.tight_layout()
+    plt.show()
+
 
 
 
