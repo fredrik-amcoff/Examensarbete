@@ -2,7 +2,6 @@ import pandas as pd
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
 from sklearn.preprocessing import RobustScaler
-import matplotlib.pyplot as plt
 import numpy as np
 
 #load training data
@@ -80,6 +79,3 @@ run_model(train_set=train_trans, eval_set=eval_swe, C=2.27697025538168, penalty=
 
 #TRANSLATED HYPERPARAMETERS: (train_set=train_trans, eval_set=eval_swe, C=2.27697025538168, penalty="l1", iter=100, threshold=0.5, csv=True)
 #Same random search arguments
-
-#Threshold for higher f1 on eng --> swe: 0.04
-

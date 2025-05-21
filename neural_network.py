@@ -4,8 +4,7 @@ import torch.optim as optim
 from torch.utils.data import TensorDataset, DataLoader
 import pandas as pd
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
-from sklearn.preprocessing import StandardScaler
-import matplotlib.pyplot as plt
+from sklearn.preprocessing import RobustScaler
 import numpy as np
 
 #load training data
@@ -40,7 +39,7 @@ def run_model(train_set, eval_set, batch, rate, epochs, hidden_1, hidden_2, thre
     X_eval = eval_set.drop("ai", axis=1).values
 
     #Normalize
-    scaler = StandardScaler()
+    scaler = RobustScaler()
     X_train = scaler.fit_transform(X_train)
     X_eval = scaler.transform(X_eval)
 

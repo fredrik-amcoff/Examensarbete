@@ -216,4 +216,4 @@ var_names = {'perplexity': 'Perplexity',
              'syntactic_burstiness': 'Syntactic burstiness (OLD)'}
 
 var = ['perplexity', 'perplexity_std', 'intrinsic_dimensions']
-generate_data_subplots(var, 'text_statistics_eng_all.csv', savepng=True)
+generate_data_subplots(var, 'text_statistics_sv_eval.csv', savepng=True)

@@ -4,17 +4,6 @@ import seaborn as sns
 import pandas as pd
 
 def plot_violin_probs_three_models(y_probs1, y_probs2, y_probs3, y_true, model_names=None, save_path="violin_probs_three_models_split.png"):
-    """
-    Plots violin plots for predicted probabilities from three models,
-    arranged in subplots with Human on the top row and AI on the bottom,
-    with large row labels on the left and x-axis labeled as density.
-
-    Parameters:
-        y_probs1, y_probs2, y_probs3 (array-like): Predicted probabilities from three models.
-        y_true (array-like): True binary labels (0 for Human, 1 for AI).
-        model_names (list of str, optional): Names for the models.
-        save_path (str): File path to save the resulting plot.
-    """
     if model_names is None:
         model_names = ['Logistic Regression', 'Random Forest', 'Neural Network']
 
@@ -24,6 +13,7 @@ def plot_violin_probs_three_models(y_probs1, y_probs2, y_probs3, y_true, model_n
     y_probs3 = np.array(y_probs3).flatten()
 
     model_probs = [y_probs1, y_probs2, y_probs3]
+    thresholds = [0.038, 0.27, 0.0015]  # Model-specific thresholds
 
     sns.set(style="whitegrid", context="talk")
     fig, axes = plt.subplots(2, 3, figsize=(15, 8))
@@ -34,28 +24,37 @@ def plot_violin_probs_three_models(y_probs1, y_probs2, y_probs3, y_true, model_n
             'Predicted Probability': probs
         })
 
+        # Human row
         sns.violinplot(
             data=df[df['True Label'] == 'Human'],
             y='Predicted Probability',
             ax=axes[0, i],
-            color=(0.6, 0.8, 1.0, 0.6),
+            color=(1.0, 0.5, 0.0, 0.4),
             cut=0,
             inner=None,
             linewidth=1
         )
+        axes[0, i].axhline(0.5, color='black', linestyle='--', linewidth=1, label='Prediction Threshold')
+        #axes[0, i].axhline(thresholds[i], color='red', linestyle='--', linewidth=1, label= 'Adjusted Threshold', zorder=3)
+        if i == 2:
+            axes[0, i].legend(loc='upper right', fontsize=12)
+
         axes[0, i].set_title(f"{name}", fontsize=22, weight='bold') 
         axes[0, i].set_xlabel("")  
         axes[0, i].set_ylim(0, 1)
 
+        # AI row
         sns.violinplot(
             data=df[df['True Label'] == 'AI'],
             y='Predicted Probability',
             ax=axes[1, i],
-            color=(1.0, 0.7, 0.8, 0.6),
+            color=(0.2, 0.4, 0.8, 0.4),
             cut=0,
             inner=None,
             linewidth=1
         )
+        axes[1, i].axhline(0.5, color='black', linestyle='--', linewidth=1)
+        #axes[1, i].axhline(thresholds[i], color='red', linestyle='--', linewidth=1, zorder=3)
         axes[1, i].set_title("")
         axes[1, i].set_xlabel("Density") 
         axes[1, i].set_ylim(0, 1)
@@ -75,6 +74,9 @@ def plot_violin_probs_three_models(y_probs1, y_probs2, y_probs3, y_true, model_n
     plt.tight_layout(rect=[0.06, 0, 1, 1])
     plt.savefig(save_path, dpi=300)
     plt.close()
+
+
+
 
 
 

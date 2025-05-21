@@ -1,7 +1,6 @@
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
-import matplotlib.pyplot as plt
 import numpy as np
 
 #load training data
@@ -74,5 +73,3 @@ run_model(train_set=train_trans, eval_set=eval_swe, n=56, depth=33, threshold=0.
 
 #TRANSLATED HYPERPARAMETERS: (train_set=train_trans, eval_set=eval_swe, n=56, depth=33, threshold=0.5)
 #Same random search arguments
-
-#Threshold for higher f1 on eng --> swe: 0.3
